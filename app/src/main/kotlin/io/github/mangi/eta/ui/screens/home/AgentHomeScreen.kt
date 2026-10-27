@@ -54,6 +54,7 @@ internal fun AgentHomeScreen(
             ) {
                 AgentChatBody(
                     messages = state.messages,
+                    conversationKey = conversationKey,
                     modelPickerState = modelPickerState,
                     isCompacting = state.isCompacting,
                     input = state.input,

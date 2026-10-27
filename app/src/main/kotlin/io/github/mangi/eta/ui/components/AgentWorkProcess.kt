@@ -274,6 +274,7 @@ private fun AgentWorkStepNode(
             ) {
                 ChatMessageItem(
                     message = message,
+                    previousRole = null,
                     onSuggestionClick = {},
                     onRunTraceClick = {},
                     onOpenBrowser = onOpenBrowser,

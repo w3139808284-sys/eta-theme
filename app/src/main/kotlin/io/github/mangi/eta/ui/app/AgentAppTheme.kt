@@ -24,6 +24,7 @@ fun AgentAppTheme(
     appearance: AppearanceSettings,
     applyInterfaceScale: Boolean,
     onResolvedDarkModeChange: (Boolean) -> Unit = {},
+    applyWallpaper: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val systemDark = isSystemInDarkTheme()
@@ -62,6 +63,10 @@ fun AgentAppTheme(
         )
     }
     val colors = controller.currentColors()
+    // applyWallpaper=false 的场景（悬浮窗等）即使开了壁纸也不铺图，只保留主题与个性化参数。
+    val wallpaper = appearance.wallpaper.takeIf { it.enabled && applyWallpaper }
+    val wallpaperBitmap = rememberWallpaperBitmap(enabled = wallpaper != null)
+    val wallpaperVisible = wallpaper != null && wallpaperBitmap != null
     val themedColors = remember(colors, isDark, appearance.monetEnabled, appearance.pureBlackEnabled) {
         if (appearance.monetEnabled && appearance.pureBlackEnabled && isDark) {
             colors.copy(
@@ -93,7 +98,12 @@ fun AgentAppTheme(
             LocalTopBarBlurStyle provides appearance.topBarBlurStyle,
             LocalPlatformDensity provides platformDensity,
             LocalDensity provides appDensity,
+            LocalWallpaper provides wallpaper,
+            LocalWallpaperActive provides wallpaperVisible,
+            LocalWallpaperBitmap provides wallpaperBitmap,
         ) {
+            // 壁纸不在这里铺全局层：全局层会打穿 Compose 页面分层、导致旧页残留与透明穿透。
+            // 壁纸由聊天页主舞台自行绘制（不透明背景 + 图片），其余页面保持原版渲染。
             content()
         }
     }

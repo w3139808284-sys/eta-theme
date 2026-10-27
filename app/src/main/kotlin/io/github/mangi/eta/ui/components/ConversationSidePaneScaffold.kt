@@ -48,6 +48,8 @@ import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import io.github.mangi.eta.R
+import io.github.mangi.eta.ui.app.LocalWallpaper
+import io.github.mangi.eta.ui.app.LocalWallpaperBitmap
 import io.github.mangi.eta.ui.model.ConversationPaneUiState
 import io.github.mangi.eta.ui.model.ConversationSummaryUi
 import kotlin.math.roundToInt
@@ -88,6 +90,8 @@ fun ConversationSidePaneScaffold(
 ) {
     val sceneLifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsState()
     val navigationEventState = rememberNavigationEventState(NavigationEventInfo.None)
+    // 壁纸激活时聊天舞台与容器透底，让 PageBackground 的壁纸连续延伸到输入栏与导航区。
+    val wallpaperActive = LocalWallpaper.current != null && LocalWallpaperBitmap.current != null
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val density = LocalDensity.current
@@ -203,7 +207,9 @@ fun ConversationSidePaneScaffold(
         Box(
             modifier = Modifier.fillMaxSize()
                 .clipToBounds()
-                .background(conversationPaneContainerColor())
+                .background(
+                    if (wallpaperActive) Color.Transparent else conversationPaneContainerColor(),
+                )
                 // 手势由共同容器拥有，侧栏和聊天舞台均可拖动；子级先处理滚动与选择。
                 .anchoredDraggable(
                     state = paneDragState,
@@ -242,12 +248,10 @@ fun ConversationSidePaneScaffold(
                     )
                     Box(
                         modifier = Modifier.fillMaxSize()
-                            .drawWithContent {
-                                drawContent()
-                                val progress = conversationPaneMotion(paneDragState.offset, paneWidthPx).progress
-                                drawRect(Color.Black, alpha = ConversationPaneMetrics.ChatScrimAlpha * progress)
-                            }
-                            .background(MiuixTheme.colorScheme.background),
+                            .background(
+                                if (wallpaperActive) Color.Transparent
+                                else MiuixTheme.colorScheme.background,
+                            ),
                     ) {
                         Box(
                             modifier = Modifier

@@ -29,6 +29,7 @@ import io.github.mangi.eta.data.model.ProviderSourceTypes
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -47,10 +48,14 @@ internal object ProviderRepository {
     }
 
     fun providersFlow(): Flow<List<ProviderSetting>> =
-        dao().providersFlow().map { providers ->
+        combine(
+            dao().providersFlow(),
+            SettingsDataStore.settingsFlow(),
+        ) { providers, settings ->
             providers
                 .map { it.toDomain() }
                 .sortedBy(ProviderSetting::sortOrder)
+                .filter { settings.showBuiltInProviders || !it.isBuiltIn }
         }
 
     fun settingsFlow(): Flow<Settings> =

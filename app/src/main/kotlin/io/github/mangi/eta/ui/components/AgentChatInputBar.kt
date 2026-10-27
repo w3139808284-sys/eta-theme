@@ -56,6 +56,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,6 +72,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -82,6 +84,8 @@ import androidx.compose.ui.unit.sp
 import io.github.mangi.eta.R
 import io.github.mangi.eta.data.model.ReasoningEffort
 import io.github.mangi.eta.data.repository.SpeechSettingsRepository
+import io.github.mangi.eta.ui.app.AppRadius
+import io.github.mangi.eta.ui.app.ChatDraftStore
 import io.github.mangi.eta.ui.model.AgentContextUsageUi
 import io.github.mangi.eta.ui.model.AgentModelPickerUiState
 import io.github.mangi.eta.ui.model.PendingFileReferenceUi
@@ -105,7 +109,7 @@ private val SendButtonVisualSize = ChatInputActionIconSize
 private val SendIconSize = 16.dp
 private val StopIconSize = 10.dp
 private val ThinkingIconSize = 21.dp
-private val InputContainerShape = RoundedCornerShape(20.dp)
+private val InputContainerShape = RoundedCornerShape(AppRadius.bubble)
 
 /**
  * Agent 输入器始终保持同一空间结构，聚焦、输入和执行过程只改变状态，不搬动操作入口。
@@ -114,6 +118,7 @@ private val InputContainerShape = RoundedCornerShape(20.dp)
 @Composable
 internal fun AgentChatInputBar(
     input: String,
+    conversationKey: String?,
     modelPickerState: AgentModelPickerUiState,
     isCompacting: Boolean,
     contextUsage: AgentContextUsageUi,
@@ -153,6 +158,12 @@ internal fun AgentChatInputBar(
     val textFieldState = rememberTextFieldState(initialText = input)
     val speechSettings by remember { SpeechSettingsRepository.settingsFlow() }.collectAsState(initial = null)
     val recognitionEnabled = speechSettings?.recognitionEnabled == true
+    val draftContext = LocalContext.current
+    // 每敲一个字就按会话落盘：普通输入只留在本地 TextFieldState，切会话/进程回收后会丢。
+    LaunchedEffect(textFieldState, conversationKey) {
+        snapshotFlow { textFieldState.text.toString() }
+            .collect { text -> ChatDraftStore.save(draftContext, conversationKey, text) }
+    }
     val dictation = rememberSpeechInput { recognized ->
         textFieldState.edit {
             val range = selection
@@ -247,8 +258,8 @@ internal fun AgentChatInputBar(
                 },
                 style = MiuixTheme.textStyles.footnote1,
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
-                // 与输入框内正文同一起点（容器 10dp + 文本 8dp）。
-                modifier = Modifier.padding(start = 18.dp, end = 18.dp, bottom = 8.dp),
+                // 与输入框内正文同一起点。
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         }
 
@@ -272,12 +283,12 @@ internal fun AgentChatInputBar(
                     )
                     .squircleSurface(
                         color = MiuixTheme.colorScheme.surfaceContainer,
-                        cornerRadius = 20.dp,
+                        cornerRadius = AppRadius.bubble,
                     )
                     .squircleBorder(
-                        width = 0.5.dp,
+                        width = 1.dp,
                         color = MiuixTheme.colorScheme.outline.copy(alpha = 0.55f),
-                        cornerRadius = 20.dp,
+                        cornerRadius = AppRadius.bubble,
                     )
                     .padding(horizontal = 10.dp, vertical = 8.dp),
             ) {

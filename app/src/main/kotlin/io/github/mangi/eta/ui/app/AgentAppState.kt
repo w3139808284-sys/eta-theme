@@ -134,7 +134,8 @@ internal class AgentAppState(
     val isLoadingEarlierMessages: Boolean get() = historyLoadState == ConversationHistoryLoadState.Loading
 
     private var selectedConversationId: String? = initialConversations.selectedConversationId
-    private var conversationsById: Map<String, AgentChatHomeUiState> = initialConversations.conversationsById
+    private var conversationsById: Map<String, AgentChatHomeUiState> =
+        initialConversations.conversationsById.mapValues { (id, state) -> withDraft(id, state) }
     private var conversationTitles: Map<String, String> = initialConversations.titles
     private var conversationUpdatedAt: Map<String, Long> = initialConversations.updatedAt
 
@@ -315,7 +316,7 @@ internal class AgentAppState(
             conversationSearchJob?.cancel()
             persistedSearchMatches = emptySet()
             selectedConversationId = snapshot.selectedConversationId
-            conversationsById = snapshot.conversationsById
+            conversationsById = snapshot.conversationsById.mapValues { (id, state) -> withDraft(id, state) }
             conversationTitles = snapshot.titles
             conversationUpdatedAt = snapshot.updatedAt
             conversationPersistence = AgentConversationPersistence(snapshot)
@@ -785,9 +786,22 @@ internal class AgentAppState(
         }
     }
 
+    /**
+     * 用落盘草稿补齐会话状态：仅当内存里的 [AgentChatHomeUiState.input] 为空时才贴回草稿，
+     * 不覆盖用户已输入的内容；无草稿或会话 ID 为空时保持原状态。
+     */
+    private fun withDraft(conversationId: String?, state: AgentChatHomeUiState): AgentChatHomeUiState =
+        ChatDraftStore.load(appContext, conversationId)
+            .takeIf { it.isNotBlank() && state.input.isBlank() }
+            ?.let { draft -> state.copy(input = draft) }
+            ?: state
+
     fun selectConversation(conversationId: String) {
         if (homeState.messageEdit != null) cancelMessageEdit()
-        val state = conversationsById[conversationId] ?: return
+        val cached = conversationsById[conversationId] ?: return
+        // 切回来时把落盘草稿贴回输入框（内存里的 input 可能是旧值）。
+        val state = withDraft(conversationId, cached)
+        if (state !== cached) conversationsById = conversationsById + (conversationId to state)
         val selectionVersion = ++conversationSelectionVersion
         cancelHistoryPageLoad()
         conversationSelectionJob?.cancel()
@@ -2202,6 +2216,8 @@ internal class AgentAppState(
         updateTimestamp: Boolean = true,
     ) {
         conversationsById = conversationsById + (conversationId to state)
+        // 草稿落盘：会话状态每次更新都同步一份，进程被回收后还能贴回来。
+        ChatDraftStore.save(appContext, conversationId, state.input)
         if (updateTimestamp) {
             conversationUpdatedAt = conversationUpdatedAt + (conversationId to System.currentTimeMillis())
         }

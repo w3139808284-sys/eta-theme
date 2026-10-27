@@ -19,6 +19,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -82,6 +83,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.mangi.eta.R
@@ -92,6 +94,10 @@ import io.github.mangi.eta.ui.markdown.StaticMarkdown
 import io.github.mangi.eta.ui.markdown.StreamingMarkdown
 import io.github.mangi.eta.ui.markdown.StreamingMarkdownState
 import io.github.mangi.eta.ui.markdown.THINKING_LINE_HEIGHT_SP
+import io.github.mangi.eta.data.model.BubbleMaterial
+import io.github.mangi.eta.ui.app.AppRadius
+import io.github.mangi.eta.ui.app.LocalAppearanceSettings
+import io.github.mangi.eta.ui.app.LocalBubbleStyles
 import io.github.mangi.eta.ui.model.AgentChatMessageUi
 import io.github.mangi.eta.ui.model.AgentMessageUi
 import io.github.mangi.eta.ui.model.RunTraceMessageUi
@@ -185,9 +191,14 @@ internal fun rememberActivePulse(
     return alpha
 }
 
+/** 消息角色归类：用户消息为 "user"，其余（AI/系统/工具/思考）统一为 "assistant"。 */
+internal fun AgentChatMessageUi.chatRole(): String =
+    if (this is UserMessageUi) "user" else "assistant"
+
 @Composable
 internal fun ChatMessageItem(
     message: AgentChatMessageUi,
+    previousRole: String?,
     onSuggestionClick: (String) -> Unit,
     onRunTraceClick: () -> Unit,
     onOpenBrowser: () -> Unit,
@@ -205,6 +216,10 @@ internal fun ChatMessageItem(
     onRegenerateMessage: (String) -> Unit = {},
     onSelectReplyCandidate: (String, Int) -> Unit = { _, _ -> },
 ) {
+    // 垂直间距：与上一条同角色 4dp，不同角色或首条 16dp。
+    val currentRole = message.chatRole()
+    val isGroupHead = previousRole == null || previousRole != currentRole
+    val topMargin = if (isGroupHead) 16.dp else 4.dp
     when (message) {
         is UserMessageUi -> UserMessageBubble(
             message = message,
@@ -213,6 +228,7 @@ internal fun ChatMessageItem(
             isEditing = isEditing,
             onEdit = { onEditMessage(message.id) },
             onDelete = { onDeleteMessage(message.id) },
+            topMargin = topMargin,
             modifier = modifier,
         )
         is AgentMessageUi -> AgentMessageBlock(
@@ -227,6 +243,8 @@ internal fun ChatMessageItem(
             onRegenerate = { onRegenerateMessage(message.id) },
             onEdit = { onEditMessage(message.id) },
             onSelectCandidate = { onSelectReplyCandidate(message.id, it) },
+            topMargin = topMargin,
+            isGroupHead = isGroupHead,
             modifier = modifier,
         )
         is SystemNoticeMessageUi -> if (message.code == SystemNoticeCode.ContextCompaction) {
@@ -262,6 +280,8 @@ internal fun ChatMessageItem(
                 messageActionsEnabled = messageActionsEnabled,
                 onDelete = { onDeleteMessage(message.id) },
                 onRegenerate = { onRegenerateMessage(message.id) },
+                topMargin = topMargin,
+                isGroupHead = isGroupHead,
                 modifier = modifier,
             )
         }
@@ -294,6 +314,7 @@ private fun UserMessageBubble(
     isEditing: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    topMargin: Dp = 0.dp,
     modifier: Modifier = Modifier,
 ) {
     @Suppress("DEPRECATION")
@@ -316,14 +337,31 @@ private fun UserMessageBubble(
     } else {
         Color(0xFFE5E7EA)
     }
+    // 气泡样式来自激活主题档案；默认值与历史一致，未配置主题时行为完全不变。
+    val userStyle = LocalBubbleStyles.current.user
+    val cornerScale = LocalAppearanceSettings.current.bubbleCornerScale
+    val baseCorner = userStyle.cornerRadiusDp.dp
+    val bubbleCorner = (baseCorner * cornerScale).coerceAtLeast(0.dp)
+    val bubbleTailCorner = (baseCorner * (0.3f * cornerScale)).coerceAtLeast(0.dp)
+    val userBubbleColor = userStyle.backgroundArgb?.let { Color(it.toInt()) }
+        ?: MiuixTheme.colorScheme.surfaceContainerHigh
 
-    Row(
-        modifier = modifier
+    BoxWithConstraints(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(
-                horizontal = if (assistantOverlay) 16.dp else 20.dp,
-                vertical = if (assistantOverlay) 4.dp else 8.dp,
+                start = 16.dp,
+                end = 16.dp,
+                top = if (assistantOverlay) 4.dp else topMargin,
             ),
+    ) {
+        val bubbleMaxWidth = minOf(
+            (320.dp * userStyle.maxWidthFraction),
+            maxWidth * 0.78f,
+        ).coerceAtLeast(160.dp)
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
         TooltipBox(
@@ -368,18 +406,31 @@ private fun UserMessageBubble(
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(max = 320.dp)
+                    .widthIn(max = bubbleMaxWidth)
                     .then(
                         if (assistantOverlay) {
                             Modifier.background(overlayBubbleColor, RoundedCornerShape(10.dp))
+                        } else if (userStyle.material == BubbleMaterial.GLASS) {
+                            Modifier
+                                .clip(RoundedCornerShape(bubbleCorner))
+                                .bubbleSurface(
+                                    material = BubbleMaterial.GLASS,
+                                    shape = RoundedCornerShape(
+                                        topStart = bubbleCorner,
+                                        topEnd = bubbleCorner,
+                                        bottomEnd = if (isEditing) bubbleCorner else bubbleTailCorner,
+                                        bottomStart = bubbleCorner,
+                                    ),
+                                    baseColor = userBubbleColor,
+                                )
                         } else {
                             Modifier.squircleSurface(
-                                color = MiuixTheme.colorScheme.surfaceContainerHigh,
-                                topStart = 20.dp,
-                                topEnd = 20.dp,
+                                color = userBubbleColor,
+                                topStart = bubbleCorner,
+                                topEnd = bubbleCorner,
                                 // 描边只支持统一圆角，编辑态收起气泡尾角，让描边与填充贴合。
-                                bottomEnd = if (isEditing) 20.dp else 6.dp,
-                                bottomStart = 20.dp,
+                                bottomEnd = if (isEditing) bubbleCorner else bubbleTailCorner,
+                                bottomStart = bubbleCorner,
                             )
                         }
                     )
@@ -388,15 +439,15 @@ private fun UserMessageBubble(
                             Modifier.squircleBorder(
                                 width = 1.dp,
                                 color = MiuixTheme.colorScheme.primary,
-                                cornerRadius = 20.dp,
+                                cornerRadius = bubbleCorner,
                             )
                         } else {
                             Modifier
                         }
                     )
                     .padding(
-                        horizontal = if (assistantOverlay) 12.dp else 16.dp,
-                        vertical = if (assistantOverlay) 8.dp else 12.dp,
+                        horizontal = if (assistantOverlay) 12.dp else userStyle.paddingHorizontalDp.dp,
+                        vertical = if (assistantOverlay) 8.dp else userStyle.paddingVerticalDp.dp,
                     ),
             ) {
                 if (message.images.isNotEmpty()) {
@@ -447,6 +498,7 @@ private fun UserMessageBubble(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -492,7 +544,7 @@ private fun ContextCompactionMarker(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -534,6 +586,41 @@ private fun ContextCompactionMarker(
 
 // ── Agent 结果 ───────────────────────────────────────────────────────
 
+/**
+ * AI 正文承载容器：为 StaticMarkdown / StreamingMarkdown 提供独立表面，
+ * 避免正文裸字压在壁纸上。宽度上限按 aiStyle.maxWidthFraction 与可用宽度约束。
+ */
+@Composable
+private fun AiBodyContainer(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val aiMaxWidthFraction = LocalBubbleStyles.current.ai.maxWidthFraction
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val aiMaxWidth = minOf(
+            (320.dp * aiMaxWidthFraction),
+            maxWidth * 0.78f,
+        ).coerceAtLeast(240.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = aiMaxWidth)
+                .squircleSurface(
+                    color = MiuixTheme.colorScheme.surface.copy(alpha = 0.72f),
+                    cornerRadius = AppRadius.card,
+                )
+                .squircleBorder(
+                    width = 1.dp,
+                    color = MiuixTheme.colorScheme.outline.copy(alpha = 0.12f),
+                    cornerRadius = AppRadius.card,
+                )
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            content()
+        }
+    }
+}
+
 @Composable
 private fun AgentMessageBlock(
     message: AgentMessageUi,
@@ -547,6 +634,8 @@ private fun AgentMessageBlock(
     onRegenerate: () -> Unit,
     onEdit: () -> Unit = {},
     onSelectCandidate: (Int) -> Unit = {},
+    topMargin: Dp = 0.dp,
+    isGroupHead: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     @Suppress("DEPRECATION")
@@ -588,11 +677,12 @@ private fun AgentMessageBlock(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = if (assistantOverlay) 16.dp else 20.dp,
-                vertical = 8.dp,
+                start = 16.dp,
+                end = 16.dp,
+                top = topMargin,
             ),
     ) {
-        if (character != null) {
+        if (character != null && isGroupHead) {
             CharacterReplyHeader(character = character, isGreeting = isGreeting)
         }
         when {
@@ -602,32 +692,38 @@ private fun AgentMessageBlock(
                 )
             }
             streamingState != null && !revealComplete -> {
-                StreamingMarkdown(
-                    state = streamingState,
-                    content = message.content,
-                    isStreaming = message.isStreaming,
-                    tone = MarkdownTone.Answer,
-                    onRevealCompleteChange = { streamingRevealComplete = it },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            message.renderMarkdown -> {
-                SelectionContainer {
-                    StaticMarkdown(
+                AiBodyContainer {
+                    StreamingMarkdown(
+                        state = streamingState,
                         content = message.content,
+                        isStreaming = message.isStreaming,
                         tone = MarkdownTone.Answer,
-                        parsed = completedDocument,
+                        onRevealCompleteChange = { streamingRevealComplete = it },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
+            message.renderMarkdown -> {
+                SelectionContainer {
+                    AiBodyContainer {
+                        StaticMarkdown(
+                            content = message.content,
+                            tone = MarkdownTone.Answer,
+                            parsed = completedDocument,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
             message.content.isNotBlank() -> {
                 SelectionContainer {
-                    Text(
-                        text = message.content,
-                        style = MiuixTheme.textStyles.body1,
-                        color = MiuixTheme.colorScheme.onSurface,
-                    )
+                    AiBodyContainer {
+                        Text(
+                            text = message.content,
+                            style = MiuixTheme.textStyles.body1,
+                            color = MiuixTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
             }
         }
@@ -751,8 +847,7 @@ private fun CharacterReplyHeader(character: RoleplayChatUi, isGreeting: Boolean)
     }
 }
 
-/** 思考卡片与运行记录等全宽描边卡片共用的圆角与描边强度，相邻时轮廓一致。 */
-private val ChatCardCorner = 12.dp
+/** 思考卡片与运行记录等全宽描边卡片共用的描边强度，相邻时轮廓一致。 */
 private const val ChatCardOutlineAlpha = 0.5f
 
 /** 回答操作按钮的触控尺寸；行整体左移半个尺寸减去图标半宽，使图标落在工作过程图标的中心线上。 */
@@ -860,20 +955,21 @@ internal fun ThinkingRow(
     )
 
     // compact 模式渲染在工作过程时间线内，节点徽章已承担图标，这里只保留文字与展开控制。
+    val aiCardCorner = AppRadius.card
     val containerModifier = if (compact) {
         modifier.fillMaxWidth()
     } else {
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .squircleSurface(
                 color = MiuixTheme.colorScheme.surface,
-                cornerRadius = ChatCardCorner,
+                cornerRadius = aiCardCorner,
             )
             .squircleBorder(
-                width = 0.5.dp,
+                width = 1.dp,
                 color = MiuixTheme.colorScheme.outline.copy(alpha = ChatCardOutlineAlpha),
-                cornerRadius = ChatCardCorner,
+                cornerRadius = aiCardCorner,
             )
     }
 
@@ -1042,15 +1138,16 @@ private fun RunTraceRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val aiCardCorner = AppRadius.card
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp)
-            .squircleSurface(color = MiuixTheme.colorScheme.surface, cornerRadius = ChatCardCorner)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .squircleSurface(color = MiuixTheme.colorScheme.surface, cornerRadius = aiCardCorner)
             .squircleBorder(
-                width = 0.5.dp,
+                width = 1.dp,
                 color = MiuixTheme.colorScheme.outline.copy(alpha = ChatCardOutlineAlpha),
-                cornerRadius = ChatCardCorner,
+                cornerRadius = aiCardCorner,
             )
             .clickable(onClick = onClick)
             .padding(12.dp),
@@ -1090,7 +1187,7 @@ private fun ToolSummaryInline(
     FlowRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = if (compact) 10.dp else 20.dp, vertical = 4.dp),
+            .padding(horizontal = if (compact) 10.dp else 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -1136,7 +1233,7 @@ private fun SuggestionChipsRow(
     FlowRow(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

@@ -50,6 +50,7 @@ import io.github.mangi.eta.ui.components.AdaptiveTopAppBar
 import io.github.mangi.eta.ui.components.CharacterAvatar
 import io.github.mangi.eta.ui.components.ConversationSidePaneScaffold
 import io.github.mangi.eta.ui.components.MiuixBackButton
+import io.github.mangi.eta.ui.components.PageBackground
 import io.github.mangi.eta.ui.components.RoleplayChatUi
 import io.github.mangi.eta.ui.components.TopBarBackdrop
 import io.github.mangi.eta.ui.components.captureForTopBar
@@ -117,9 +118,13 @@ internal fun AgentAppShell(
     val scrollBehavior = MiuixScrollBehavior()
     val backdrop = rememberTopBarBackdrop()
     val topBarColor = topBarContainerColor(backdrop)
+    // 壁纸激活时外层容器透底，让 PageBackground 的壁纸作为聊天页连续底层；否则用不透明主题底色兜底。
+    val wallpaperActive = LocalWallpaper.current != null && LocalWallpaperBitmap.current != null
     val pageContent: @Composable () -> Unit = {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
+            containerColor = if (wallpaperActive) Color.Transparent
+                else MiuixTheme.colorScheme.background,
             contentWindowInsets = WindowInsets.safeDrawing.only(
                 WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
             ),
@@ -153,7 +158,9 @@ internal fun AgentAppShell(
                     .captureForTopBar(backdrop)
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
             ) {
-                content(padding)
+                PageBackground {
+                    content(padding)
+                }
             }
         }
     }

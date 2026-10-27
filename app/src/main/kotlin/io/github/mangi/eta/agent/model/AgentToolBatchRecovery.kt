@@ -20,8 +20,12 @@ internal object AgentToolBatchRecovery {
             if (message.role != "tool") closeBatch()
             recovered += message
             if (message.toolCallsJson.isNotBlank()) {
-                val calls = JSONArray(message.toolCallsJson)
-                for (index in 0 until calls.length()) open += calls.getJSONObject(index).getString("id")
+                // 容错：历史记录里的 tool_calls 可能是坏 JSON 或缺 id，别让恢复流程整个崩掉。
+                val calls = runCatching { JSONArray(message.toolCallsJson) }.getOrNull()
+                    ?: return@forEach
+                for (index in 0 until calls.length()) {
+                    open += runCatching { calls.getJSONObject(index).getString("id") }.getOrNull() ?: continue
+                }
             }
             if (message.role == "tool") open.remove(message.toolCallId)
         }

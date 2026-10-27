@@ -37,6 +37,14 @@ internal object AgentConversationCodec {
     fun decodeTranscript(input: InputStream): List<AgentModelClient.ConversationMessage> =
         json.decodeFromStream(input)
 
+    /** 容错解码：损坏或不兼容的 transcript 降级为空列表，不阻断会话加载；仅捕获序列化异常。 */
+    fun decodeTranscriptLenient(raw: String?): List<AgentModelClient.ConversationMessage> =
+        try {
+            decodeTranscript(raw)
+        } catch (_: kotlinx.serialization.SerializationException) {
+            emptyList()
+        }
+
     fun toJsonObject(message: AgentModelClient.ConversationMessage): JSONObject =
         JSONObject()
             .put("role", message.role)

@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,7 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -47,6 +49,7 @@ fun MiuixScaffoldPage(
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
             topBar = {
                 TopBarBackdrop(backdrop) {
                     // 页面自带主视觉（如角色详情）时用紧凑标题，避免大标题与主视觉重复。
@@ -70,6 +73,7 @@ fun MiuixScaffoldPage(
                 }
             },
         ) { innerPadding ->
+            PageBackground {
             WidePageContent { sidePadding ->
                 // 保留 MiuixTheme 注入的默认越界工厂，让短内容页也能回弹到顶栏采样区。
                 LazyColumn(
@@ -121,6 +125,7 @@ fun MiuixScaffold(
 
         Scaffold(
             modifier = modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
             topBar = {
                 TopBarBackdrop(backdrop) {
                     AdaptiveTopAppBar(
@@ -133,10 +138,12 @@ fun MiuixScaffold(
                 }
             },
         ) { paddingValues ->
+            PageBackground {
             Box(modifier = Modifier.fillMaxSize().captureForTopBar(backdrop)) {
                 WidePageContent { sidePadding ->
                     content(paddingValues, scrollBehavior, sidePadding)
                 }
+            }
             }
         }
     }

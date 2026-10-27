@@ -18,11 +18,36 @@ data class AppearanceSettings(
     val swipeDismissEnabled: Boolean = true,
     val predictiveBackEnabled: Boolean = true,
     val interfaceScale: Float = DEFAULT_INTERFACE_SCALE,
+    /** 气泡圆角倍率；1f 为原版样式，0f 为主线直角。 */
+    val bubbleCornerScale: Float = 1f,
+    /** 首页空对话时的问候语；留空使用内置文案。 */
+    val homeGreeting: String = "",
+    /** 聊天区域背景独立配置；关闭时始终使用主题底色。 */
+    val wallpaper: WallpaperSettings = WallpaperSettings(),
 ) {
     fun normalized(): AppearanceSettings = copy(
         interfaceScale = normalizeInterfaceScale(interfaceScale),
+        bubbleCornerScale = normalizeBubbleCornerScale(bubbleCornerScale),
+        homeGreeting = normalizeHomeGreeting(homeGreeting),
+        wallpaper = wallpaper.normalized(),
     )
 }
+
+const val MAX_HOME_GREETING_LENGTH = 40
+
+fun normalizeHomeGreeting(value: String): String =
+    value.trim().replace('\n', ' ').take(MAX_HOME_GREETING_LENGTH)
+
+const val MIN_BUBBLE_CORNER_SCALE = 0f
+const val MAX_BUBBLE_CORNER_SCALE = 1.6f
+const val DEFAULT_BUBBLE_CORNER_SCALE = 1f
+
+fun normalizeBubbleCornerScale(value: Float): Float =
+    if (value.isFinite()) {
+        value.coerceIn(MIN_BUBBLE_CORNER_SCALE, MAX_BUBBLE_CORNER_SCALE)
+    } else {
+        DEFAULT_BUBBLE_CORNER_SCALE
+    }
 
 @Serializable
 enum class AppearanceThemeMode(val persistedValue: String) {

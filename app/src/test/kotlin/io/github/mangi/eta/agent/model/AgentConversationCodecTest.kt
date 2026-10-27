@@ -128,4 +128,46 @@ class AgentConversationCodecTest {
         assertFalse(encoded.contains("opaque-secret"))
         assertFalse(encoded.contains("_eta_responses_output_items"))
     }
+
+    @Test
+    fun lenientDecodeParsesValidTranscript() {
+        val encoded = AgentConversationCodec.encodeTranscriptForStorage(
+            listOf(AgentModelClient.ConversationMessage(role = "user", content = "你好"))
+        )
+        val decoded = AgentConversationCodec.decodeTranscriptLenient(encoded)
+        assertEquals(1, decoded.size)
+        assertEquals("你好", decoded.first().content)
+    }
+
+    @Test
+    fun lenientDecodeDegradesMalformedTranscriptToEmpty() {
+        // D1 损坏 journal 形态：转义引号 + 不平衡花括号（对应 "offset 2" 错误）
+        val malformed = "[{\\\"id\\\":\\\"call_01\\\""
+        assertTrue(AgentConversationCodec.decodeTranscriptLenient(malformed).isEmpty())
+    }
+
+    @Test
+    fun lenientDecodeDegradesMissingRequiredFieldToEmpty() {
+        // 缺少必填 role 字段 → MissingFieldException（SerializationException 子类）
+        val missingRole = "[{\"content\":\"no role field\"}]"
+        assertTrue(AgentConversationCodec.decodeTranscriptLenient(missingRole).isEmpty())
+    }
+
+    @Test
+    fun lenientDecodeHandlesNullAndBlank() {
+        assertTrue(AgentConversationCodec.decodeTranscriptLenient(null).isEmpty())
+        assertTrue(AgentConversationCodec.decodeTranscriptLenient("").isEmpty())
+        assertTrue(AgentConversationCodec.decodeTranscriptLenient("   ").isEmpty())
+    }
+
+    @Test
+    fun strictDecodeStillThrowsSerializationException() {
+        var threw = false
+        try {
+            AgentConversationCodec.decodeTranscript("[{\\\"id\\\":\\\"call_01\\\"")
+        } catch (_: kotlinx.serialization.SerializationException) {
+            threw = true
+        }
+        assertTrue(threw)
+    }
 }

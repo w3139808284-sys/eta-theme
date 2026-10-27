@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
@@ -18,9 +19,12 @@ import io.github.mangi.eta.agent.runtime.AgentRuntimeService
 import io.github.mangi.eta.agent.voice.EtaAssistantOverlayService
 import io.github.mangi.eta.core.AndroidAgentLogger
 import io.github.mangi.eta.data.model.AppearanceThemeMode
-import io.github.mangi.eta.data.repository.AppearanceSettingsRepository
+import io.github.mangi.eta.data.model.BubbleStyleSet
+import io.github.mangi.eta.data.repository.ThemeProfileRepository
+import io.github.mangi.eta.data.repository.toAppearanceSettings
 import io.github.mangi.eta.ui.app.AgentAppRoot
 import io.github.mangi.eta.ui.app.AgentAppTheme
+import io.github.mangi.eta.ui.app.LocalBubbleStyles
 import io.github.mangi.eta.ui.app.PredictiveBackController
 import io.github.mangi.eta.ui.app.installStartupSplash
 import java.util.Collections
@@ -39,11 +43,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         launchRequests = MainActivityLaunchRequests.restore(savedInstanceState, intent)
         lifecycleScope.launch {
-            val initialAppearance = AppearanceSettingsRepository.settings()
+            val initialProfile = ThemeProfileRepository.activeProfile()
+            val initialAppearance = initialProfile.toAppearanceSettings()
             appliedPredictiveBackEnabled = initialAppearance.predictiveBackEnabled
             setContent {
-                val appearance by AppearanceSettingsRepository.settingsFlow()
-                    .collectAsState(initial = initialAppearance)
+                // 激活主题档案是唯一外观数据源：切换档案即时生效，会话状态不受影响。
+                val activeProfile by ThemeProfileRepository.activeProfileFlow()
+                    .collectAsState(initial = initialProfile)
+                val appearance = remember(activeProfile) { activeProfile.toAppearanceSettings() }
+                val bubbleStyles: BubbleStyleSet = activeProfile.bubbles
 
                 LaunchedEffect(appearance.themeMode) {
                     updateApplicationNightMode(appearance.themeMode)
@@ -64,6 +72,9 @@ class MainActivity : ComponentActivity() {
                     applyInterfaceScale = true,
                     onResolvedDarkModeChange = ::updateSystemBars,
                 ) {
+                    androidx.compose.runtime.CompositionLocalProvider(
+                        LocalBubbleStyles provides bubbleStyles,
+                    ) {
                     AgentAppRoot(
                         assistantConversationKey = launchRequests.assistantConversationKey,
                         requestedConversationId = launchRequests.conversationId,
@@ -94,6 +105,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                     )
+                    }
                 }
             }
             contentReady = true

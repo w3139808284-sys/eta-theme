@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -79,7 +80,11 @@ import io.github.mangi.eta.R
 import io.github.mangi.eta.agent.browser.BrowserSessionSnapshot
 import io.github.mangi.eta.data.model.ReasoningEffort
 import io.github.mangi.eta.ui.app.AgentConversationRevisionReducer
+import io.github.mangi.eta.ui.app.LocalAppearanceSettings
 import io.github.mangi.eta.ui.app.LocalBlurEnabled
+import io.github.mangi.eta.ui.app.LocalWallpaper
+import io.github.mangi.eta.ui.app.LocalWallpaperBitmap
+import io.github.mangi.eta.ui.markdown.StreamingMarkdownState
 import io.github.mangi.eta.ui.markdown.StreamingMarkdownStateCache
 import io.github.mangi.eta.ui.model.ConversationHistoryLoadState
 import io.github.mangi.eta.ui.model.AgentChatMessageUi
@@ -134,6 +139,7 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @OptIn(ExperimentalLayoutApi::class)
 internal fun AgentChatBody(
     messages: List<AgentChatMessageUi>,
+    conversationKey: String?,
     modelPickerState: AgentModelPickerUiState,
     isCompacting: Boolean,
     input: String,
@@ -238,6 +244,7 @@ internal fun AgentChatBody(
             hasMessages = visibleMessages.isNotEmpty() || hasEarlierMessages,
             scrollState = scrollState,
             input = input,
+            conversationKey = conversationKey,
             modelPickerState = modelPickerState,
             isCompacting = isCompacting,
             contextUsage = contextUsage,
@@ -307,6 +314,7 @@ private fun AgentChatScaffold(
     hasMessages: Boolean,
     scrollState: LazyListState,
     input: String,
+    conversationKey: String?,
     modelPickerState: AgentModelPickerUiState,
     isCompacting: Boolean,
     contextUsage: AgentContextUsageUi,
@@ -360,10 +368,12 @@ private fun AgentChatScaffold(
         drawRect(surfaceColor)
         drawContent()
     }
+    // 壁纸激活时聊天页容器透底，让 PageBackground 壁纸连续显示；否则用 surface 不透明兜底。
+    val wallpaperActive = LocalWallpaper.current != null && LocalWallpaperBitmap.current != null
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = Color.Transparent,
+        containerColor = if (wallpaperActive) Color.Transparent else MiuixTheme.colorScheme.surface,
         contentWindowInsets = WindowInsets(
             left = 0.dp,
             top = 0.dp,
@@ -374,6 +384,7 @@ private fun AgentChatScaffold(
             AgentChatBottomBar(
                 messageBackdrop = messageBackdrop.takeIf { frostEnabled },
                 input = input,
+                conversationKey = conversationKey,
                 modelPickerState = modelPickerState,
                 isCompacting = isCompacting,
                 contextUsage = contextUsage,
@@ -741,11 +752,11 @@ internal fun AgentConversationMessages(
                     )
                 }
             }
-            items(
+            itemsIndexed(
                 items = timelineEntries,
-                key = { it.key },
-                contentType = { it.contentType() },
-            ) { entry ->
+                key = { _, it -> it.key },
+                contentType = { _, it -> it.contentType() },
+            ) { index, entry ->
                 val itemModifier = Modifier.animateItem(
                     fadeInSpec = tween(durationMillis = 180),
                     placementSpec = null,
@@ -753,11 +764,24 @@ internal fun AgentConversationMessages(
                     // 状态中裁掉的旧消息继续绘制，并与同位置的新流式消息短暂重叠。
                     fadeOutSpec = null,
                 )
+                // 上一条 ChatMessageItem 渲染消息的角色（向前跳过 WorkProcess 分组）。
+                val previousRole = remember(timelineEntries, index) {
+                    var previous: AgentChatMessageUi? = null
+                    for (i in index - 1 downTo 0) {
+                        val e = timelineEntries.getOrNull(i)
+                        if (e is AgentTimelineEntry.Message) {
+                            previous = e.message
+                            break
+                        }
+                    }
+                    previous?.chatRole()
+                }
                 when (entry) {
                     is AgentTimelineEntry.Message -> {
                         val message = entry.message
                         ChatMessageItem(
                             message = message,
+                            previousRole = previousRole,
                             assistantOverlay = assistantOverlay,
                             retainedStreamingState = (message as? AgentMessageUi)
                                 ?.takeIf { it.isStreaming || streamingMarkdownStates.containsKey(it.id) }
@@ -991,6 +1015,7 @@ internal fun resolveFinalResultMessageIds(
 private fun AgentChatBottomBar(
     messageBackdrop: LayerBackdrop?,
     input: String,
+    conversationKey: String?,
     modelPickerState: AgentModelPickerUiState,
     isCompacting: Boolean,
     contextUsage: AgentContextUsageUi,
@@ -1026,61 +1051,15 @@ private fun AgentChatBottomBar(
             .fillMaxWidth()
             .imePadding(),
     ) {
-        if (messageBackdrop != null) {
-            val blurColors = BlurDefaults.blurColors(
-                blendColors = listOf(
-                    BlendColorEntry(MiuixTheme.colorScheme.surface.copy(alpha = 0.72f))
-                ),
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(ChatBottomFrostHeight)
-                    // DstIn 让真实磨砂在顶部透明、靠近输入框时逐渐变实，消除硬裁切线。
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black),
-                            ),
-                            blendMode = BlendMode.DstIn,
-                        )
-                    }
-                    .textureBlur(
-                        backdrop = messageBackdrop,
-                        shape = RectangleShape,
-                        blurRadius = 20f,
-                        colors = blurColors,
-                    ),
-            )
-        } else {
-            // 空白主页沿用原来的轻微渐隐，不改变主页视觉。
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(16.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                MiuixTheme.colorScheme.surface,
-                            ),
-                        )
-                    ),
-            )
-        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MiuixTheme.colorScheme.surface)
                 .navigationBarsPadding()
                 .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
         ) {
             AgentChatInputBar(
                 input = input,
+                conversationKey = conversationKey,
                 modelPickerState = modelPickerState,
                 isCompacting = isCompacting,
                 contextUsage = contextUsage,
@@ -1207,8 +1186,11 @@ private fun EmptyChatState(
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
             } else {
+                // 自定义首页问候语：留空时回落到内置文案。
                 Text(
-                    text = stringResource(R.string.ui_how_can_i_help_you_e75391),
+                    text = LocalAppearanceSettings.current.homeGreeting.ifBlank {
+                        stringResource(R.string.ui_how_can_i_help_you_e75391)
+                    },
                     style = MiuixTheme.textStyles.headline1,
                     color = MiuixTheme.colorScheme.onSurface,
                 )
@@ -1235,7 +1217,7 @@ private fun EmptyChatState(
                 ),
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     suggestions.chunked(2).forEach { rowItems ->

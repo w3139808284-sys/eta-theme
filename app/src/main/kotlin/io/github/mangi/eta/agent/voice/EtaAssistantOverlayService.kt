@@ -321,6 +321,8 @@ internal class EtaAssistantOverlayService : Service(), LifecycleOwner, SavedStat
             AgentAppTheme(
                 appearance = appearance,
                 applyInterfaceScale = false,
+                // 浮窗不铺壁纸：窗口本身透明且尺寸小，铺图只会干扰主界面视觉。
+                applyWallpaper = false,
             ) {
                 // ColorOS 在 Overlay 窗口切换期间可能短暂使用软件画布；RuntimeShader
                 // 无法在该画布绘制，因此浮窗统一使用 Miuix 的圆角回退路径。

@@ -251,8 +251,8 @@ internal class AgentRuntimeRunExecutor(
             val historyTool = conversationId?.let { id ->
                 ConversationHistoryTool {
                     val checkpoint = runBlocking { EtaDatabase.get(appContext).conversationDao().contextCheckpoint(id) }
-                    val journal = AgentConversationCodec.decodeTranscript(checkpoint?.journalJson)
-                        .ifEmpty { AgentConversationCodec.decodeTranscript(checkpoint?.historyJson) }
+                    val journal = AgentConversationCodec.decodeTranscriptLenient(checkpoint?.journalJson)
+                        .ifEmpty { AgentConversationCodec.decodeTranscriptLenient(checkpoint?.historyJson) }
                     journal + session.transcript
                 }
             }

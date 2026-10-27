@@ -29,6 +29,7 @@ import io.github.mangi.eta.R
 import io.github.mangi.eta.data.model.ProviderSetting
 import io.github.mangi.eta.data.model.ProviderSourceTypes
 import io.github.mangi.eta.data.model.typeLabel
+import io.github.mangi.eta.data.datastore.SettingsDataStore
 import io.github.mangi.eta.data.repository.ProviderRepository
 import io.github.mangi.eta.data.repository.RuntimeConfigRepository
 import io.github.mangi.eta.ui.components.EtaArrowPreference
@@ -38,6 +39,7 @@ import io.github.mangi.eta.ui.components.EtaPreferenceDefaults
 import io.github.mangi.eta.ui.components.EtaPreferenceDivider
 import io.github.mangi.eta.ui.components.EtaPreferenceIcon
 import io.github.mangi.eta.ui.components.EtaPreferenceRow
+import io.github.mangi.eta.ui.components.EtaSwitchPreference
 import io.github.mangi.eta.ui.components.MiuixDialogActions
 import io.github.mangi.eta.ui.components.MiuixScaffoldPage
 import io.github.mangi.eta.ui.navigation.AppRoute
@@ -56,6 +58,7 @@ internal fun ModelProviderListScreen(
 ) {
     val scope = rememberCoroutineScope()
     val providers by ProviderRepository.providersFlow().collectAsState(initial = emptyList())
+    val showBuiltInProviders by SettingsDataStore.showBuiltInProvidersFlow().collectAsState(initial = true)
     val selectedProviderId by RuntimeConfigRepository.selectedProviderIdFlow().collectAsState(initial = null)
     var searchQuery by remember { mutableStateOf("") }
     var providerToDelete by remember { mutableStateOf<ProviderSetting?>(null) }
@@ -87,6 +90,16 @@ internal fun ModelProviderListScreen(
                     .fillMaxWidth()
                     .padding(horizontal = EtaPreferenceDefaults.SidePadding)
                     .padding(top = 12.dp, bottom = 8.dp),
+            )
+        }
+
+        item(key = "show_built_in") {
+            EtaSwitchPreference(
+                title = stringResource(R.string.show_built_in_providers),
+                checked = showBuiltInProviders,
+                onCheckedChange = { value ->
+                    scope.launch { SettingsDataStore.setShowBuiltInProviders(value) }
+                },
             )
         }
 
