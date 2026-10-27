@@ -686,7 +686,10 @@ private fun AgentMessageBlock(
 
     val character = LocalRoleplayChat.current.takeUnless { assistantOverlay }
     val isGreeting = character != null && message.id.startsWith(GreetingMessagePrefix)
-    Column(
+    // AI 侧头像：仅在组首显示，避免连续回复时重复。
+    val avatarSettings = LocalAvatarSettings.current
+    val showAvatar = avatarSettings.enabled && !assistantOverlay && isGroupHead
+    Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(
@@ -694,7 +697,17 @@ private fun AgentMessageBlock(
                 end = 16.dp,
                 top = topMargin,
             ),
+        verticalAlignment = Alignment.Top,
     ) {
+        if (showAvatar) {
+            MessageAvatar(
+                settings = avatarSettings,
+                imagePath = avatarSettings.aiImagePath,
+                fallbackName = stringResource(R.string.avatar_ai_fallback),
+            )
+            Spacer(Modifier.width(AvatarGap))
+        }
+        Column(modifier = Modifier.weight(1f)) {
         if (character != null && isGroupHead) {
             CharacterReplyHeader(character = character, isGreeting = isGreeting)
         }
@@ -813,6 +826,7 @@ private fun AgentMessageBlock(
                 }
             }
         }
+    }
     }
 }
 
