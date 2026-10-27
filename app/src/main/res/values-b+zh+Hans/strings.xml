@@ -1413,4 +1413,21 @@
   <string name="appearance_bubble_color">颜色</string>
   <string name="appearance_bubble_corner_value">圆角：%1$d dp</string>
   <string name="appearance_bubble_padding_value">内边距：%1$d dp</string>
+  <string name="appearance_group_avatar">双方头像</string>
+  <string name="appearance_avatar_enabled">显示头像</string>
+  <string name="appearance_avatar_enabled_summary">在每条消息旁显示圆形或圆角方形头像</string>
+  <string name="appearance_avatar_user">我的头像</string>
+  <string name="appearance_avatar_ai">AI 头像</string>
+  <string name="appearance_avatar_pick">选择图片</string>
+  <string name="appearance_avatar_replace">更换图片</string>
+  <string name="appearance_avatar_remove">移除图片</string>
+  <string name="appearance_avatar_shape">头像形状</string>
+  <string name="appearance_avatar_shape_circle">圆形</string>
+  <string name="appearance_avatar_shape_rounded">圆角方形</string>
+  <string name="appearance_avatar_size">头像尺寸</string>
+  <string name="appearance_avatar_corner">圆角大小</string>
+  <string name="appearance_avatar_pick_failed">无法应用该图片</string>
+  <string name="appearance_avatar_pick_failed_summary">选中的文件无法按图片读取，换一张试试。</string>
+  <string name="avatar_user_fallback">我</string>
+  <string name="avatar_ai_fallback">AI</string>
 </resources>

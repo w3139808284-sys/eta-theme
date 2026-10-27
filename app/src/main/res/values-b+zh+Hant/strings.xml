@@ -1387,4 +1387,21 @@
   <string name="appearance_bubble_color">顏色</string>
   <string name="appearance_bubble_corner_value">圓角：%1$d dp</string>
   <string name="appearance_bubble_padding_value">內邊距：%1$d dp</string>
+  <string name="appearance_group_avatar">雙方頭像</string>
+  <string name="appearance_avatar_enabled">顯示頭像</string>
+  <string name="appearance_avatar_enabled_summary">在每則訊息旁顯示圓形或圓角方形頭像</string>
+  <string name="appearance_avatar_user">我的頭像</string>
+  <string name="appearance_avatar_ai">AI 頭像</string>
+  <string name="appearance_avatar_pick">選擇圖片</string>
+  <string name="appearance_avatar_replace">更換圖片</string>
+  <string name="appearance_avatar_remove">移除圖片</string>
+  <string name="appearance_avatar_shape">頭像形狀</string>
+  <string name="appearance_avatar_shape_circle">圓形</string>
+  <string name="appearance_avatar_shape_rounded">圓角方形</string>
+  <string name="appearance_avatar_size">頭像尺寸</string>
+  <string name="appearance_avatar_corner">圓角大小</string>
+  <string name="appearance_avatar_pick_failed">無法套用該圖片</string>
+  <string name="appearance_avatar_pick_failed_summary">選取的檔案無法按圖片讀取，換一張試試。</string>
+  <string name="avatar_user_fallback">我</string>
+  <string name="avatar_ai_fallback">AI</string>
 </resources>

@@ -1435,4 +1435,21 @@
   <string name="appearance_bubble_color">Color</string>
   <string name="appearance_bubble_corner_value">Corner radius: %1$d dp</string>
   <string name="appearance_bubble_padding_value">Padding: %1$d dp</string>
+  <string name="appearance_group_avatar">Avatars</string>
+  <string name="appearance_avatar_enabled">Show avatars</string>
+  <string name="appearance_avatar_enabled_summary">Show a round or rounded avatar beside each message</string>
+  <string name="appearance_avatar_user">My avatar</string>
+  <string name="appearance_avatar_ai">AI avatar</string>
+  <string name="appearance_avatar_pick">Choose image</string>
+  <string name="appearance_avatar_replace">Replace image</string>
+  <string name="appearance_avatar_remove">Remove image</string>
+  <string name="appearance_avatar_shape">Avatar shape</string>
+  <string name="appearance_avatar_shape_circle">Circle</string>
+  <string name="appearance_avatar_shape_rounded">Rounded square</string>
+  <string name="appearance_avatar_size">Avatar size</string>
+  <string name="appearance_avatar_corner">Corner radius</string>
+  <string name="appearance_avatar_pick_failed">Could not apply image</string>
+  <string name="appearance_avatar_pick_failed_summary">The selected file could not be read as an image. Try another picture.</string>
+  <string name="avatar_user_fallback">Me</string>
+  <string name="avatar_ai_fallback">AI</string>
 </resources>
