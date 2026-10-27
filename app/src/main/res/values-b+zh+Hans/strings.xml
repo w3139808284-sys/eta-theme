@@ -1512,4 +1512,12 @@
   <string name="appearance_avatar_pick_failed_summary">选中的文件无法按图片读取，换一张试试。</string>
   <string name="avatar_user_fallback">我</string>
   <string name="avatar_ai_fallback">AI</string>
+  <string name="appearance_avatar_user_enabled">我的头像</string>
+  <string name="appearance_avatar_user_enabled_summary">在我的消息旁显示头像</string>
+  <string name="appearance_avatar_ai_enabled">AI 头像</string>
+  <string name="appearance_avatar_ai_enabled_summary">在 AI 回复旁显示头像</string>
+  <string name="appearance_avatar_ai_name">AI 名字标签</string>
+  <string name="appearance_avatar_ai_name_summary">在 AI 气泡上方显示名字</string>
+  <string name="appearance_avatar_ai_name_dialog_summary">最多 24 个字符，留空则不显示</string>
+  <string name="appearance_avatar_ai_name_hint">名字</string>
 </resources>
