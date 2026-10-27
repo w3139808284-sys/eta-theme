@@ -31,9 +31,13 @@ import io.github.mangi.eta.data.model.AppearancePaletteStyle
 import io.github.mangi.eta.data.model.AppearanceSettings
 import io.github.mangi.eta.data.model.AppearanceThemeMode
 import io.github.mangi.eta.data.model.AppearanceTopBarBlurStyle
+import io.github.mangi.eta.data.model.AvatarSettings
+import io.github.mangi.eta.data.model.AvatarShape
 import io.github.mangi.eta.data.model.BubbleMaterial
 import io.github.mangi.eta.data.model.DEFAULT_THEME_PROFILE_ID
 import io.github.mangi.eta.data.model.DEFAULT_THEME_PROFILE_NAME
+import io.github.mangi.eta.data.model.MAX_AVATAR_CORNER
+import io.github.mangi.eta.data.model.MAX_AVATAR_SIZE
 import io.github.mangi.eta.data.model.MAX_BUBBLE_CORNER_SCALE
 import io.github.mangi.eta.data.model.MAX_BUBBLE_CORNER_RADIUS
 import io.github.mangi.eta.data.model.MAX_HOME_GREETING_LENGTH
@@ -41,6 +45,8 @@ import io.github.mangi.eta.data.model.MAX_INTERFACE_SCALE
 import io.github.mangi.eta.data.model.MAX_PADDING
 import io.github.mangi.eta.data.model.MAX_WALLPAPER_BLUR
 import io.github.mangi.eta.data.model.MAX_WALLPAPER_DIM
+import io.github.mangi.eta.data.model.MIN_AVATAR_CORNER
+import io.github.mangi.eta.data.model.MIN_AVATAR_SIZE
 import io.github.mangi.eta.data.model.MIN_BUBBLE_CORNER_RADIUS
 import io.github.mangi.eta.data.model.MIN_BUBBLE_CORNER_SCALE
 import io.github.mangi.eta.data.model.MIN_INTERFACE_SCALE
@@ -48,6 +54,8 @@ import io.github.mangi.eta.data.model.MIN_PADDING
 import io.github.mangi.eta.data.model.MIN_WALLPAPER_BLUR
 import io.github.mangi.eta.data.model.MIN_WALLPAPER_DIM
 import io.github.mangi.eta.data.model.WallpaperScaleMode
+import io.github.mangi.eta.data.model.normalizeAvatarCorner
+import io.github.mangi.eta.data.model.normalizeAvatarSize
 import io.github.mangi.eta.data.model.normalizeBubbleCornerScale
 import io.github.mangi.eta.data.model.normalizeHomeGreeting
 import io.github.mangi.eta.data.model.normalizeInterfaceScale
@@ -55,6 +63,7 @@ import io.github.mangi.eta.data.model.ThemeProfile
 import io.github.mangi.eta.data.repository.AppearanceSettingsRepository
 import io.github.mangi.eta.data.repository.ThemeProfileCodec
 import io.github.mangi.eta.data.repository.ThemeProfileRepository
+import io.github.mangi.eta.ui.app.AvatarStore
 import io.github.mangi.eta.ui.app.LocalAppearanceSettings
 import io.github.mangi.eta.ui.app.WallpaperStore
 import io.github.mangi.eta.ui.components.EtaArrowPreference
@@ -100,6 +109,7 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
     var newProfileName by remember { mutableStateOf("") }
     var showBubbleDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showAvatarError by remember { mutableStateOf(false) }
 
     fun update(transform: (AppearanceSettings) -> AppearanceSettings) {
         coroutineScope.launch {
@@ -111,6 +121,10 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
         coroutineScope.launch {
             ThemeProfileRepository.saveProfile(profile)
         }
+    }
+
+    fun updateAvatars(transform: (AvatarSettings) -> AvatarSettings) {
+        saveProfile(activeProfile.copy(avatars = transform(activeProfile.avatars).normalized()))
     }
 
     fun switchProfile(id: String) {
@@ -164,6 +178,35 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
                 }
             } else {
                 showWallpaperError = true
+            }
+        }
+    }
+
+    // 头像图片选择：用户 / AI 各一个。
+    val userAvatarPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        coroutineScope.launch {
+            val path = AvatarStore.import(context, AvatarStore.Target.USER, uri)
+            if (path != null) {
+                updateAvatars { it.copy(userImagePath = path, enabled = true) }
+            } else {
+                showAvatarError = true
+            }
+        }
+    }
+
+    val aiAvatarPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        coroutineScope.launch {
+            val path = AvatarStore.import(context, AvatarStore.Target.AI, uri)
+            if (path != null) {
+                updateAvatars { it.copy(aiImagePath = path, enabled = true) }
+            } else {
+                showAvatarError = true
             }
         }
     }
@@ -314,6 +357,141 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
                     summary = stringResource(R.string.appearance_bubble_edit_summary),
                     onClick = { showBubbleDialog = true },
                     holdDownState = showBubbleDialog,
+                )
+            }
+        }
+
+        item(key = "appearance_avatar_title") {
+            EtaPreferenceGroupTitle(text = stringResource(R.string.appearance_group_avatar))
+        }
+        item(key = "appearance_avatar_card") {
+            val avatars = activeProfile.avatars
+            EtaPreferenceGroup(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
+                EtaSwitchPreference(
+                    title = stringResource(R.string.appearance_avatar_enabled),
+                    summary = stringResource(R.string.appearance_avatar_enabled_summary),
+                    checked = avatars.enabled,
+                    onCheckedChange = { enabled ->
+                        updateAvatars { it.copy(enabled = enabled) }
+                    },
+                )
+                EtaPreferenceDivider(hasLeading = false)
+                // 用户头像
+                EtaArrowPreference(
+                    title = if (avatars.userImagePath != null) {
+                        stringResource(R.string.appearance_avatar_replace)
+                    } else {
+                        stringResource(R.string.appearance_avatar_pick)
+                    },
+                    summary = stringResource(R.string.appearance_avatar_user),
+                    onClick = { userAvatarPicker.launch(arrayOf("image/*")) },
+                )
+                if (avatars.userImagePath != null) {
+                    EtaPreferenceDivider(hasLeading = false)
+                    EtaArrowPreference(
+                        title = stringResource(R.string.appearance_avatar_remove),
+                        summary = stringResource(R.string.appearance_avatar_user),
+                        onClick = {
+                            AvatarStore.clear(context, AvatarStore.Target.USER)
+                            updateAvatars { it.copy(userImagePath = null) }
+                        },
+                    )
+                }
+                EtaPreferenceDivider(hasLeading = false)
+                // AI 头像
+                EtaArrowPreference(
+                    title = if (avatars.aiImagePath != null) {
+                        stringResource(R.string.appearance_avatar_replace)
+                    } else {
+                        stringResource(R.string.appearance_avatar_pick)
+                    },
+                    summary = stringResource(R.string.appearance_avatar_ai),
+                    onClick = { aiAvatarPicker.launch(arrayOf("image/*")) },
+                )
+                if (avatars.aiImagePath != null) {
+                    EtaPreferenceDivider(hasLeading = false)
+                    EtaArrowPreference(
+                        title = stringResource(R.string.appearance_avatar_remove),
+                        summary = stringResource(R.string.appearance_avatar_ai),
+                        onClick = {
+                            AvatarStore.clear(context, AvatarStore.Target.AI)
+                            updateAvatars { it.copy(aiImagePath = null) }
+                        },
+                    )
+                }
+                EtaPreferenceDivider(hasLeading = false)
+                // 形状
+                val shapeLabels = listOf(
+                    stringResource(R.string.appearance_avatar_shape_circle),
+                    stringResource(R.string.appearance_avatar_shape_rounded),
+                )
+                EtaOverlayDropdownPreference(
+                    title = stringResource(R.string.appearance_avatar_shape),
+                    summary = shapeLabels[avatars.shape.ordinal],
+                    items = shapeLabels,
+                    selectedIndex = avatars.shape.ordinal,
+                    onSelectedIndexChange = { index ->
+                        AvatarShape.entries.getOrNull(index)?.let { shape ->
+                            updateAvatars { it.copy(shape = shape) }
+                        }
+                    },
+                )
+                // 圆角（仅圆角方形时显示）
+                if (avatars.shape == AvatarShape.ROUNDED) {
+                    EtaPreferenceDivider(hasLeading = false)
+                    EtaArrowPreference(
+                        title = stringResource(R.string.appearance_avatar_corner),
+                        endActions = {
+                            Text(
+                                text = "${avatars.cornerRadiusDp.roundToInt()}dp",
+                                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                            )
+                        },
+                        bottomAction = {
+                            Slider(
+                                value = avatars.cornerRadiusDp.coerceIn(
+                                    MIN_AVATAR_CORNER,
+                                    MAX_AVATAR_CORNER,
+                                ),
+                                onValueChange = { value ->
+                                    updateAvatars { it.copy(cornerRadiusDp = normalizeAvatarCorner(value)) }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                valueRange = MIN_AVATAR_CORNER..MAX_AVATAR_CORNER,
+                                showKeyPoints = true,
+                                keyPoints = listOf(0f, 4f, 8f, 16f),
+                                magnetThreshold = 0.4f,
+                                hapticEffect = SliderDefaults.SliderHapticEffect.Step,
+                            )
+                        },
+                    )
+                }
+                EtaPreferenceDivider(hasLeading = false)
+                // 尺寸
+                EtaArrowPreference(
+                    title = stringResource(R.string.appearance_avatar_size),
+                    endActions = {
+                        Text(
+                            text = "${avatars.sizeDp.roundToInt()}dp",
+                            fontSize = MiuixTheme.textStyles.body2.fontSize,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                        )
+                    },
+                    bottomAction = {
+                        Slider(
+                            value = avatars.sizeDp.coerceIn(MIN_AVATAR_SIZE, MAX_AVATAR_SIZE),
+                            onValueChange = { value ->
+                                updateAvatars { it.copy(sizeDp = normalizeAvatarSize(value)) }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            valueRange = MIN_AVATAR_SIZE..MAX_AVATAR_SIZE,
+                            showKeyPoints = true,
+                            keyPoints = listOf(24f, 32f, 40f, 48f),
+                            magnetThreshold = 0.4f,
+                            hapticEffect = SliderDefaults.SliderHapticEffect.Step,
+                        )
+                    },
                 )
             }
         }
@@ -721,6 +899,19 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
             confirmText = stringResource(R.string.action_confirm),
             onCancel = { showWallpaperError = false },
             onConfirm = { showWallpaperError = false },
+        )
+    }
+
+    EtaWindowDialog(
+        show = showAvatarError,
+        title = stringResource(R.string.appearance_avatar_pick_failed),
+        summary = stringResource(R.string.appearance_avatar_pick_failed_summary),
+        onDismissRequest = { showAvatarError = false },
+    ) {
+        MiuixDialogActions(
+            confirmText = stringResource(R.string.action_confirm),
+            onCancel = { showAvatarError = false },
+            onConfirm = { showAvatarError = false },
         )
     }
 
