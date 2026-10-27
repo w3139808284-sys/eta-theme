@@ -36,6 +36,7 @@ import io.github.mangi.eta.data.model.AvatarShape
 import io.github.mangi.eta.data.model.BubbleMaterial
 import io.github.mangi.eta.data.model.DEFAULT_THEME_PROFILE_ID
 import io.github.mangi.eta.data.model.DEFAULT_THEME_PROFILE_NAME
+import io.github.mangi.eta.data.model.MAX_AI_NAME_LENGTH
 import io.github.mangi.eta.data.model.MAX_AVATAR_CORNER
 import io.github.mangi.eta.data.model.MAX_AVATAR_SIZE
 import io.github.mangi.eta.data.model.MAX_BUBBLE_CORNER_SCALE
@@ -54,6 +55,7 @@ import io.github.mangi.eta.data.model.MIN_PADDING
 import io.github.mangi.eta.data.model.MIN_WALLPAPER_BLUR
 import io.github.mangi.eta.data.model.MIN_WALLPAPER_DIM
 import io.github.mangi.eta.data.model.WallpaperScaleMode
+import io.github.mangi.eta.data.model.normalizeAiName
 import io.github.mangi.eta.data.model.normalizeAvatarCorner
 import io.github.mangi.eta.data.model.normalizeAvatarSize
 import io.github.mangi.eta.data.model.normalizeBubbleCornerScale
@@ -77,7 +79,9 @@ import io.github.mangi.eta.ui.components.EtaWindowDialog
 import io.github.mangi.eta.ui.components.MiuixDialogActions
 import io.github.mangi.eta.ui.components.MiuixScaffoldPage
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.SliderDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -110,6 +114,8 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
     var showBubbleDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showAvatarError by remember { mutableStateOf(false) }
+    var showAiNameDialog by remember { mutableStateOf(false) }
+    var aiNameInput by remember { mutableStateOf("") }
 
     fun update(transform: (AppearanceSettings) -> AppearanceSettings) {
         coroutineScope.launch {
@@ -182,33 +188,40 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
         }
     }
 
-    // 头像图片选择：用户 / AI 各一个。
+    // 头像图片选择：用户 / AI 各一个。选图后进入裁剪页，确认才落盘。
+    var cropSource by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    var cropTarget by remember { mutableStateOf(AvatarStore.Target.USER) }
+
+    fun startCrop(uri: android.net.Uri, target: AvatarStore.Target) {
+        coroutineScope.launch {
+            val bitmap: android.graphics.Bitmap? = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        android.graphics.BitmapFactory.decodeStream(input)
+                    }
+                }.getOrNull()
+            }
+            if (bitmap == null) {
+                showAvatarError = true
+            } else {
+                cropTarget = target
+                cropSource = bitmap
+            }
+        }
+    }
+
     val userAvatarPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        coroutineScope.launch {
-            val path = AvatarStore.import(context, AvatarStore.Target.USER, uri)
-            if (path != null) {
-                updateAvatars { it.copy(userImagePath = path, enabled = true) }
-            } else {
-                showAvatarError = true
-            }
-        }
+        startCrop(uri, AvatarStore.Target.USER)
     }
 
     val aiAvatarPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        coroutineScope.launch {
-            val path = AvatarStore.import(context, AvatarStore.Target.AI, uri)
-            if (path != null) {
-                updateAvatars { it.copy(aiImagePath = path, enabled = true) }
-            } else {
-                showAvatarError = true
-            }
-        }
+        startCrop(uri, AvatarStore.Target.AI)
     }
 
     // 主题档案导入/导出
@@ -368,11 +381,11 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
             val avatars = activeProfile.avatars
             EtaPreferenceGroup(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
                 EtaSwitchPreference(
-                    title = stringResource(R.string.appearance_avatar_enabled),
-                    summary = stringResource(R.string.appearance_avatar_enabled_summary),
-                    checked = avatars.enabled,
+                    title = stringResource(R.string.appearance_avatar_user_enabled),
+                    summary = stringResource(R.string.appearance_avatar_user_enabled_summary),
+                    checked = avatars.userEnabled,
                     onCheckedChange = { enabled ->
-                        updateAvatars { it.copy(enabled = enabled) }
+                        updateAvatars { it.copy(userEnabled = enabled) }
                     },
                 )
                 EtaPreferenceDivider(hasLeading = false)
@@ -398,6 +411,15 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
                     )
                 }
                 EtaPreferenceDivider(hasLeading = false)
+                EtaSwitchPreference(
+                    title = stringResource(R.string.appearance_avatar_ai_enabled),
+                    summary = stringResource(R.string.appearance_avatar_ai_enabled_summary),
+                    checked = avatars.aiEnabled,
+                    onCheckedChange = { enabled ->
+                        updateAvatars { it.copy(aiEnabled = enabled) }
+                    },
+                )
+                EtaPreferenceDivider(hasLeading = false)
                 // AI 头像
                 EtaArrowPreference(
                     title = if (avatars.aiImagePath != null) {
@@ -419,6 +441,19 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
                         },
                     )
                 }
+                EtaPreferenceDivider(hasLeading = false)
+                // AI 名字标签
+                EtaArrowPreference(
+                    title = stringResource(R.string.appearance_avatar_ai_name),
+                    summary = avatars.aiName.ifBlank {
+                        stringResource(R.string.appearance_avatar_ai_name_summary)
+                    },
+                    onClick = {
+                        aiNameInput = avatars.aiName
+                        showAiNameDialog = true
+                    },
+                    holdDownState = showAiNameDialog,
+                )
                 EtaPreferenceDivider(hasLeading = false)
                 // 形状
                 val shapeLabels = listOf(
@@ -915,6 +950,33 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
         )
     }
 
+    EtaWindowDialog(
+        show = showAiNameDialog,
+        title = stringResource(R.string.appearance_avatar_ai_name),
+        summary = stringResource(R.string.appearance_avatar_ai_name_dialog_summary),
+        onDismissRequest = { showAiNameDialog = false },
+    ) {
+        Column {
+            TextField(
+                value = aiNameInput,
+                onValueChange = { aiNameInput = it.take(MAX_AI_NAME_LENGTH) },
+                label = stringResource(R.string.appearance_avatar_ai_name_hint),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            MiuixDialogActions(
+                confirmText = stringResource(R.string.action_confirm),
+                onCancel = { showAiNameDialog = false },
+                onConfirm = {
+                    val normalized = normalizeAiName(aiNameInput)
+                    updateAvatars { it.copy(aiName = normalized) }
+                    showAiNameDialog = false
+                },
+                modifier = Modifier.padding(top = 16.dp),
+            )
+        }
+    }
+
     // 新建主题档案
     EtaWindowDialog(
         show = showNewProfileDialog,
@@ -961,6 +1023,31 @@ internal fun AppearanceSettingsScreen(onBack: () -> Unit) {
             profile = activeProfile,
             onDismiss = { showBubbleDialog = false },
             onSave = { updated -> saveProfile(updated) },
+        )
+    }
+
+    // 头像裁剪：全屏覆盖，确认后保存方形位图并写回档案。
+    cropSource?.let { bitmap ->
+        AvatarCropScreen(
+            source = bitmap,
+            onCancel = { cropSource = null },
+            onConfirm = { cropped ->
+                val target = cropTarget
+                cropSource = null
+                coroutineScope.launch {
+                    val path = AvatarStore.saveCropped(context, target, cropped)
+                    if (path != null) {
+                        updateAvatars {
+                            when (target) {
+                                AvatarStore.Target.USER -> it.copy(userImagePath = path, userEnabled = true)
+                                AvatarStore.Target.AI -> it.copy(aiImagePath = path, aiEnabled = true)
+                            }
+                        }
+                    } else {
+                        showAvatarError = true
+                    }
+                }
+            },
         )
     }
 }

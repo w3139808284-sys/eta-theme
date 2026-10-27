@@ -69,4 +69,48 @@ object AvatarStore {
         runCatching { file(context, target).delete() }
         runCatching { File(directory(context), "${target.fileName}.tmp").delete() }
     }
+
+    /**
+     * 保存已裁剪的正方形位图，返回文件绝对路径。
+     *
+     * 长边限制在 [MAX_SAVE_PX]，避免把相册原图体积带进私有目录。
+     */
+    suspend fun saveCropped(
+        context: Context,
+        target: Target,
+        bitmap: android.graphics.Bitmap,
+    ): String? = withContext(Dispatchers.IO) {
+        try {
+            val scaled = scaleDown(bitmap, MAX_SAVE_PX)
+            val targetFile = file(context, target)
+            val temp = File(directory(context), "${target.fileName}.tmp")
+            temp.outputStream().use { out ->
+                scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
+            }
+            if (scaled !== bitmap) scaled.recycle()
+            if (targetFile.exists()) targetFile.delete()
+            if (!temp.renameTo(targetFile)) {
+                temp.copyTo(targetFile, overwrite = true)
+                temp.delete()
+            }
+            targetFile.absolutePath
+        } catch (error: Throwable) {
+            AndroidAgentLogger.error("Avatar save failed: type=${error.safeLogType()}")
+            null
+        }
+    }
+
+    private fun scaleDown(bitmap: android.graphics.Bitmap, maxPx: Int): android.graphics.Bitmap {
+        val longest = maxOf(bitmap.width, bitmap.height)
+        if (longest <= maxPx) return bitmap
+        val ratio = maxPx.toFloat() / longest
+        return android.graphics.Bitmap.createScaledBitmap(
+            bitmap,
+            (bitmap.width * ratio).toInt().coerceAtLeast(1),
+            (bitmap.height * ratio).toInt().coerceAtLeast(1),
+            true,
+        )
+    }
+
+    private const val MAX_SAVE_PX = 512
 }

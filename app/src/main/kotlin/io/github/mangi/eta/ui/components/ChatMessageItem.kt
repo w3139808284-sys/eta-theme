@@ -356,7 +356,7 @@ private fun UserMessageBubble(
             ),
     ) {
         val avatarSettings = LocalAvatarSettings.current
-        val showAvatar = avatarSettings.enabled && !assistantOverlay
+        val showAvatar = avatarSettings.userEnabled && !assistantOverlay
         val avatarReserve = if (showAvatar) avatarSettings.sizeDp.dp + AvatarGap else 0.dp
         val bubbleMaxWidth = minOf(
             (320.dp * userStyle.maxWidthFraction),
@@ -601,10 +601,13 @@ private fun ContextCompactionMarker(
 /**
  * AI 正文承载容器：为 StaticMarkdown / StreamingMarkdown 提供独立表面，
  * 避免正文裸字压在壁纸上。宽度上限按 aiStyle.maxWidthFraction 与可用宽度约束。
+ *
+ * [nameLabel] 非空时在气泡正上方左对齐渲染名字标签，底边距气泡顶边 4dp。
  */
 @Composable
 private fun AiBodyContainer(
     modifier: Modifier = Modifier,
+    nameLabel: String? = null,
     content: @Composable () -> Unit,
 ) {
     val aiMaxWidthFraction = LocalBubbleStyles.current.ai.maxWidthFraction
@@ -613,22 +616,35 @@ private fun AiBodyContainer(
             (320.dp * aiMaxWidthFraction),
             maxWidth * 0.78f,
         ).coerceAtLeast(240.dp)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = aiMaxWidth)
-                .squircleSurface(
-                    color = MiuixTheme.colorScheme.surface.copy(alpha = 0.72f),
-                    cornerRadius = AppRadius.card,
+        Column(modifier = Modifier.widthIn(max = aiMaxWidth)) {
+            if (!nameLabel.isNullOrBlank()) {
+                Text(
+                    text = nameLabel,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
                 )
-                .squircleBorder(
-                    width = 1.dp,
-                    color = MiuixTheme.colorScheme.outline.copy(alpha = 0.12f),
-                    cornerRadius = AppRadius.card,
-                )
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
-            content()
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .squircleSurface(
+                        color = MiuixTheme.colorScheme.surface.copy(alpha = 0.72f),
+                        cornerRadius = AppRadius.card,
+                    )
+                    .squircleBorder(
+                        width = 1.dp,
+                        color = MiuixTheme.colorScheme.outline.copy(alpha = 0.12f),
+                        cornerRadius = AppRadius.card,
+                    )
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                content()
+            }
         }
     }
 }
@@ -683,7 +699,10 @@ private fun AgentMessageBlock(
     val isGreeting = character != null && message.id.startsWith(GreetingMessagePrefix)
     // AI 侧头像：仅在组首显示，避免连续回复时重复。
     val avatarSettings = LocalAvatarSettings.current
-    val showAvatar = avatarSettings.enabled && !assistantOverlay && isGroupHead
+    val showAvatar = avatarSettings.aiEnabled && !assistantOverlay && isGroupHead
+    // 名字标签：角色对话已有 CharacterReplyHeader，此处不再重复。
+    val nameLabel = avatarSettings.aiName
+        .takeIf { it.isNotBlank() && character == null && !assistantOverlay }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -713,7 +732,7 @@ private fun AgentMessageBlock(
                 )
             }
             streamingState != null && !revealComplete -> {
-                AiBodyContainer {
+                AiBodyContainer(nameLabel = nameLabel) {
                     StreamingMarkdown(
                         state = streamingState,
                         content = message.content,
@@ -726,7 +745,7 @@ private fun AgentMessageBlock(
             }
             message.renderMarkdown -> {
                 SelectionContainer {
-                    AiBodyContainer {
+                    AiBodyContainer(nameLabel = nameLabel) {
                         StaticMarkdown(
                             content = message.content,
                             tone = MarkdownTone.Answer,
@@ -738,7 +757,7 @@ private fun AgentMessageBlock(
             }
             message.content.isNotBlank() -> {
                 SelectionContainer {
-                    AiBodyContainer {
+                    AiBodyContainer(nameLabel = nameLabel) {
                         Text(
                             text = message.content,
                             style = MiuixTheme.textStyles.body1,

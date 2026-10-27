@@ -1404,4 +1404,12 @@
   <string name="appearance_avatar_pick_failed_summary">選取的檔案無法按圖片讀取，換一張試試。</string>
   <string name="avatar_user_fallback">我</string>
   <string name="avatar_ai_fallback">AI</string>
+  <string name="appearance_avatar_user_enabled">我的頭像</string>
+  <string name="appearance_avatar_user_enabled_summary">在我的訊息旁顯示頭像</string>
+  <string name="appearance_avatar_ai_enabled">AI 頭像</string>
+  <string name="appearance_avatar_ai_enabled_summary">在 AI 回覆旁顯示頭像</string>
+  <string name="appearance_avatar_ai_name">AI 名字標籤</string>
+  <string name="appearance_avatar_ai_name_summary">在 AI 氣泡上方顯示名字</string>
+  <string name="appearance_avatar_ai_name_dialog_summary">最多 24 個字元，留空則不顯示</string>
+  <string name="appearance_avatar_ai_name_hint">名字</string>
 </resources>

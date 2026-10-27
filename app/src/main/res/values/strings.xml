@@ -1452,4 +1452,12 @@
   <string name="appearance_avatar_pick_failed_summary">The selected file could not be read as an image. Try another picture.</string>
   <string name="avatar_user_fallback">Me</string>
   <string name="avatar_ai_fallback">AI</string>
+  <string name="appearance_avatar_user_enabled">My avatar</string>
+  <string name="appearance_avatar_user_enabled_summary">Show your avatar on your own messages</string>
+  <string name="appearance_avatar_ai_enabled">AI avatar</string>
+  <string name="appearance_avatar_ai_enabled_summary">Show the AI avatar on replies</string>
+  <string name="appearance_avatar_ai_name">AI name label</string>
+  <string name="appearance_avatar_ai_name_summary">Show a name above AI bubbles</string>
+  <string name="appearance_avatar_ai_name_dialog_summary">Up to 24 characters; leave empty to hide</string>
+  <string name="appearance_avatar_ai_name_hint">Name</string>
 </resources>
