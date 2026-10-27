@@ -63,12 +63,15 @@ internal data class AgentWorkSummary(
     val thinkingCount: Int,
     val toolCount: Int,
     val failedCount: Int,
+    /** 思考耗时合计（秒）；无数据时为 0。 */
+    val elapsedSeconds: Int = 0,
 )
 
 internal fun List<AgentChatMessageUi>.workSummary(): AgentWorkSummary = AgentWorkSummary(
     thinkingCount = count { it is ThinkingMessageUi },
     toolCount = count { it is ToolActivityMessageUi },
     failedCount = count { it is ToolActivityMessageUi && it.status == ToolActivityStatusUi.Failed },
+    elapsedSeconds = filterIsInstance<ThinkingMessageUi>().sumOf { it.elapsedSeconds ?: 0 },
 )
 
 /**
