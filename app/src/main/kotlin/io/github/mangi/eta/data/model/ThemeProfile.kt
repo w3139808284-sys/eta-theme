@@ -86,6 +86,8 @@ data class ThemeProfile(
     val homeGreeting: String = "",
     /** 气泡样式（用户/AI 独立）。 */
     val bubbles: BubbleStyleSet = BubbleStyleSet(),
+    /** 双方头像设置。 */
+    val avatars: AvatarSettings = AvatarSettings(),
     /** 壁纸/背景配置。 */
     val wallpaper: WallpaperSettings = WallpaperSettings(),
 ) {
@@ -95,6 +97,7 @@ data class ThemeProfile(
         bubbleCornerScale = normalizeBubbleCornerScale(bubbleCornerScale),
         homeGreeting = normalizeHomeGreeting(homeGreeting),
         bubbles = bubbles.normalized(),
+        avatars = avatars.normalized(),
         wallpaper = wallpaper.normalized(),
     )
 }
