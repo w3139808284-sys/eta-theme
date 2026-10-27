@@ -92,13 +92,11 @@ internal fun AgentWorkProcess(
             (message is ToolActivityMessageUi && message.status == ToolActivityStatusUi.Running)
     }
     val steps = remember(messages) { messages.toWorkSteps() }
-    // null 表示自动模式；用户点过之后只认手动选择。
+    // null 表示尚未手动干预；默认折叠成一行摘要，点击展开。
     var manualExpanded by rememberSaveable(id) { mutableStateOf<Boolean?>(null) }
 
-    // 以“是否仍是本轮末尾的工作过程”判定收起，而不是 running：思考结束到工具开始之间
-    // running 会短暂为 false，按它收起会造成反复开合。展开态在组合期同步推导，与正文
-    // 条目插入落在同一帧，不经 LaunchedEffect 晚一帧收起。语音浮层空间有限，自动模式不展开。
-    val bodyVisible = manualExpanded ?: (active && !assistantOverlay)
+    // 默认折叠（null → false）；用户点开后遵循手动选择。
+    val bodyVisible = manualExpanded ?: false
 
     Column(
         modifier = modifier
@@ -217,9 +215,16 @@ private fun workSummaryText(summary: AgentWorkSummary): String {
         if (summary.failedCount > 0) {
             add(pluralStringResource(R.plurals.work_summary_failed, summary.failedCount, summary.failedCount))
         }
+        if (summary.elapsedSeconds > 0) {
+            add(formatElapsed(summary.elapsedSeconds))
+        }
     }
     return parts.joinToString(" · ").ifEmpty { stringResource(R.string.work_completed) }
 }
+
+/** 把秒数格式化为 2.1s / 45s 这类紧凑形式。 */
+private fun formatElapsed(seconds: Int): String =
+    if (seconds < 10) "%.1fs".format(seconds.toFloat()) else "${seconds}s"
 
 @Composable
 private fun AgentWorkStepNode(
