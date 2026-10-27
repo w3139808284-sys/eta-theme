@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.Density
 import io.github.mangi.eta.data.model.AppearanceSettings
 import io.github.mangi.eta.data.model.AppearanceTopBarBlurStyle
+import io.github.mangi.eta.data.model.AvatarSettings
 import io.github.mangi.eta.data.model.BubbleStyleSet
 import io.github.mangi.eta.data.model.WallpaperSettings
 
@@ -15,6 +16,9 @@ internal val LocalPlatformDensity = staticCompositionLocalOf<Density?> { null }
 
 /** 用户/AI 气泡独立样式（来自激活主题档案）。 */
 internal val LocalBubbleStyles = staticCompositionLocalOf { BubbleStyleSet() }
+
+/** 双方头像设置（来自激活主题档案）。 */
+internal val LocalAvatarSettings = staticCompositionLocalOf { AvatarSettings() }
 
 /** 当前生效的壁纸设置；null 表示该页面不显示壁纸。 */
 internal val LocalWallpaper = staticCompositionLocalOf<WallpaperSettings?> { null }

@@ -97,6 +97,7 @@ import io.github.mangi.eta.ui.markdown.THINKING_LINE_HEIGHT_SP
 import io.github.mangi.eta.data.model.BubbleMaterial
 import io.github.mangi.eta.ui.app.AppRadius
 import io.github.mangi.eta.ui.app.LocalAppearanceSettings
+import io.github.mangi.eta.ui.app.LocalAvatarSettings
 import io.github.mangi.eta.ui.app.LocalBubbleStyles
 import io.github.mangi.eta.ui.model.AgentChatMessageUi
 import io.github.mangi.eta.ui.model.AgentMessageUi
@@ -355,14 +356,18 @@ private fun UserMessageBubble(
                 top = if (assistantOverlay) 4.dp else topMargin,
             ),
     ) {
+        val avatarSettings = LocalAvatarSettings.current
+        val showAvatar = avatarSettings.enabled && !assistantOverlay
+        val avatarReserve = if (showAvatar) avatarSettings.sizeDp.dp + AvatarGap else 0.dp
         val bubbleMaxWidth = minOf(
             (320.dp * userStyle.maxWidthFraction),
-            maxWidth * 0.78f,
+            (maxWidth - avatarReserve) * 0.78f,
         ).coerceAtLeast(160.dp)
 
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.Top,
     ) {
         TooltipBox(
             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
@@ -496,6 +501,14 @@ private fun UserMessageBubble(
                     )
                 }
             }
+        }
+        if (showAvatar) {
+            Spacer(Modifier.width(AvatarGap))
+            MessageAvatar(
+                settings = avatarSettings,
+                imagePath = avatarSettings.userImagePath,
+                fallbackName = stringResource(R.string.avatar_user_fallback),
+            )
         }
     }
     }

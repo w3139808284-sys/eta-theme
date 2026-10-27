@@ -24,6 +24,7 @@ import io.github.mangi.eta.data.repository.ThemeProfileRepository
 import io.github.mangi.eta.data.repository.toAppearanceSettings
 import io.github.mangi.eta.ui.app.AgentAppRoot
 import io.github.mangi.eta.ui.app.AgentAppTheme
+import io.github.mangi.eta.ui.app.LocalAvatarSettings
 import io.github.mangi.eta.ui.app.LocalBubbleStyles
 import io.github.mangi.eta.ui.app.PredictiveBackController
 import io.github.mangi.eta.ui.app.installStartupSplash
@@ -52,6 +53,7 @@ class MainActivity : ComponentActivity() {
                     .collectAsState(initial = initialProfile)
                 val appearance = remember(activeProfile) { activeProfile.toAppearanceSettings() }
                 val bubbleStyles: BubbleStyleSet = activeProfile.bubbles
+                val avatarSettings = activeProfile.avatars
 
                 LaunchedEffect(appearance.themeMode) {
                     updateApplicationNightMode(appearance.themeMode)
@@ -74,6 +76,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     androidx.compose.runtime.CompositionLocalProvider(
                         LocalBubbleStyles provides bubbleStyles,
+                        LocalAvatarSettings provides avatarSettings,
                     ) {
                     AgentAppRoot(
                         assistantConversationKey = launchRequests.assistantConversationKey,
