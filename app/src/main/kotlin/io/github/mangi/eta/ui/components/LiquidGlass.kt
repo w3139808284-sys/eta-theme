@@ -47,7 +47,7 @@ internal fun Modifier.liquidGlassSurface(
     cornerRadiusPx: Float,
     blurRadius: Float = LiquidGlassBlurRadius,
     refractionAmountPx: Float = LiquidGlassRefractionAmountPx,
-    refractionHeightPx: Float = LiquidGlassRefractionHeightPx,
+    refractionHeightRatio: Float = LiquidGlassRefractionHeightRatio,
 ): Modifier? {
     if (backdrop == null || !isRuntimeShaderSupported()) return null
 
@@ -66,7 +66,7 @@ internal fun Modifier.liquidGlassSurface(
         alpha = if (isLightGlass) LiquidGlassEdgeAlphaLight else LiquidGlassEdgeAlphaDark,
     )
 
-    val enableRefraction = refractionAmountPx > 0f && refractionHeightPx > 0f
+    val enableRefraction = refractionAmountPx > 0f && refractionHeightRatio > 0f
 
     // 无折射需求时走原路径（与历史行为完全一致）。
     if (!enableRefraction) {
@@ -113,7 +113,10 @@ internal fun Modifier.liquidGlassSurface(
                 // 气泡尺寸：SDF 轮廓基准
                 setFloatUniform("bubbleSize", bubbleW, bubbleH)
                 setFloatUniform("cornerRadius", cornerRadiusPx / scale)
-                setFloatUniform("refractionHeight", refractionHeightPx / scale)
+                // 折射带高度改为「气泡宽度的比例」，让宽气泡也有足够厚的折射带。
+                // 单位说明：bubbleW 已是降采样单位，与 SDF 的 sd / refractionHeight 同空间，
+                // 因此这里不再除以 scale（否则会二次换算，带宽缩到 1/2）。
+                setFloatUniform("refractionHeight", bubbleW * refractionHeightRatio)
                 setFloatUniform("refractionAmount", refractionAmountPx / scale)
             }
         },
@@ -143,13 +146,16 @@ private const val LiquidGlassEdgeAlphaDark = 0.42f
 private const val LiquidGlassRefractionKey = "eta_liquid_glass_refraction_v1"
 
 /**
- * 边缘折射带高度（px）：距轮廓多深开始折射。
- * 16px 在 3x 屏上约 5dp，视觉上是"细边"而非"厚边"。
+ * 边缘折射带高度：占气泡宽度的比例。
+ *
+ * 早先用固定 16 全分辨率 px，在 770+ px 宽的气泡上只占 2%，
+ * 实测有效折射带仅 10-12 px，视觉上不可辨。改为比例后带宽随气泡放大。
+ * 0.08 ≈ 777px 气泡对应约 62 全分辨率 px（≈21dp@3x）。
  */
-private const val LiquidGlassRefractionHeightPx = 16f
+private const val LiquidGlassRefractionHeightRatio = 0.08f
 
 /**
- * 边缘折射位移量（px）：圆角处采样点最多外移多少。
+ * 边缘折射位移量（px，全分辨率）：圆角处采样点最多外移多少。
  * 32px 在 3x 屏上约 10dp，足以看出背景被弯折，又不至于撕裂。
  */
 private const val LiquidGlassRefractionAmountPx = 32f
