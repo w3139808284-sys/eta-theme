@@ -13,20 +13,36 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import io.github.mangi.eta.data.model.BubbleMaterial
+import top.yukonga.miuix.kmp.blur.LayerBackdrop
 
 /**
- * 轻量玻璃拟态：半透明填充 + 柔和描边 + 阴影 + 顶部高光。
+ * 气泡材质统一入口。
  *
- * 完全基于标准 Compose API 实现，无需 RenderEffect/特殊硬件，任何 API 33+ 设备表现一致。
- * 不引入 Operit 使用的 kyant/liquid 等第三方玻璃库，避免增加依赖面与兼容风险。
+ * - SOLID：不附加视觉（由调用方画纯色表面）
+ * - GLASS：轻量玻璃拟态（半透明 + 描边 + 阴影 + 顶部高光）
+ * - LIQUID_GLASS：真实背景采样玻璃；当 [backdrop] 缺失或设备不支持 RuntimeShader 时，
+ *   **自动降级为 GLASS**，保证视觉可用且不崩。
+ *
+ * [backdrop] 必须是「气泡背后的背景层」，不能是包含气泡自身的消息列表，
+ * 否则会自采样成模糊套模糊。
  */
 @Composable
 fun Modifier.bubbleSurface(
     material: BubbleMaterial,
     shape: RoundedCornerShape,
     baseColor: Color,
+    backdrop: LayerBackdrop? = null,
 ): Modifier {
-    if (material != BubbleMaterial.GLASS) {
+    if (material == BubbleMaterial.LIQUID_GLASS) {
+        val liquid = liquidGlassSurface(
+            backdrop = backdrop,
+            shape = shape,
+            containerColor = baseColor,
+        )
+        if (liquid != null) return liquid
+        // 降级：无 backdrop / 不支持 shader 时退回 GLASS 观感。
+    }
+    if (material != BubbleMaterial.GLASS && material != BubbleMaterial.LIQUID_GLASS) {
         return this
     }
     val isLight = baseColor.luminance() >= 0.5f
