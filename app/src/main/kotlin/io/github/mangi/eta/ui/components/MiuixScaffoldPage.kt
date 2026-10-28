@@ -74,30 +74,31 @@ fun MiuixScaffoldPage(
             },
         ) { innerPadding ->
             PageBackground {
-            WidePageContent { sidePadding ->
-                // 保留 MiuixTheme 注入的默认越界工厂，让短内容页也能回弹到顶栏采样区。
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .horizontalCutoutPadding()
-                        .captureForTopBar(backdrop)
-                        .scrollEndHaptic()
-                        .overScrollVertical()
-                        .nestedScroll(scrollBehavior.nestedScrollConnection),
-                    contentPadding = PaddingValues(
-                        start = sidePadding,
-                        top = innerPadding.calculateTopPadding(),
-                        end = sidePadding,
-                    ),
-                ) {
-                    content()
-                    item(key = "bottom_spacer") {
-                        MiuixPageBottomSpacer()
+                WidePageContent { sidePadding ->
+                    // 保留 MiuixTheme 注入的默认越界工厂，让短内容页也能回弹到顶栏采样区。
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .horizontalCutoutPadding()
+                            .captureForTopBar(backdrop)
+                            .scrollEndHaptic()
+                            .overScrollVertical()
+                            .nestedScroll(scrollBehavior.nestedScrollConnection),
+                        contentPadding = PaddingValues(
+                            start = sidePadding,
+                            top = innerPadding.calculateTopPadding(),
+                            end = sidePadding,
+                        ),
+                    ) {
+                        content()
+                        item(key = "bottom_spacer") {
+                            MiuixPageBottomSpacer()
+                        }
                     }
                 }
+                overlay()
             }
-            overlay()
         }
     }
 }
