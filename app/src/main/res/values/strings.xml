@@ -1511,6 +1511,7 @@
   <string name="appearance_bubble_material">Material</string>
   <string name="appearance_bubble_material_solid">Solid</string>
   <string name="appearance_bubble_material_glass">Glass</string>
+  <string name="appearance_bubble_material_liquid_glass">Liquid glass</string>
   <string name="appearance_bubble_color">Color</string>
   <string name="appearance_bubble_corner_value">Corner radius: %1$d dp</string>
   <string name="appearance_bubble_padding_value">Padding: %1$d dp</string>

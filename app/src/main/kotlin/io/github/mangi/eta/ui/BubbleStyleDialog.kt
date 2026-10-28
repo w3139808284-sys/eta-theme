@@ -104,10 +104,12 @@ private fun BubbleStyleEditor(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
-        // 材质：用两个胶囊标签互斥选择，避免在对话框内嵌套下拉弹窗（需根 Scaffold，会崩）。
+        // 材质：用胶囊标签互斥选择，避免在对话框内嵌套下拉弹窗（需根 Scaffold，会崩）。
+        // 标签与枚举一一对应；新增枚举值时必须同步补齐，否则会越界。
         val materialLabels = listOf(
             stringResource(R.string.appearance_bubble_material_solid),
             stringResource(R.string.appearance_bubble_material_glass),
+            stringResource(R.string.appearance_bubble_material_liquid_glass),
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -120,8 +122,10 @@ private fun BubbleStyleEditor(
                 color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
             )
             BubbleMaterial.entries.forEach { material ->
+                // 用 getOrNull 兜底：万一将来枚举新增而标签未同步，也不会崩溃。
+                val label = materialLabels.getOrNull(material.ordinal) ?: material.name
                 EtaChoiceChip(
-                    text = materialLabels[material.ordinal],
+                    text = label,
                     selected = style.material == material,
                     onClick = { onStyleChange(style.copy(material = material)) },
                 )

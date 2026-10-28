@@ -1492,6 +1492,7 @@
   <string name="appearance_bubble_material">材质</string>
   <string name="appearance_bubble_material_solid">纯色</string>
   <string name="appearance_bubble_material_glass">玻璃</string>
+  <string name="appearance_bubble_material_liquid_glass">液态玻璃</string>
   <string name="appearance_bubble_color">颜色</string>
   <string name="appearance_bubble_corner_value">圆角：%1$d dp</string>
   <string name="appearance_bubble_padding_value">内边距：%1$d dp</string>
