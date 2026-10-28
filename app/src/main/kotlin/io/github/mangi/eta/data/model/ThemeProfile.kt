@@ -7,11 +7,14 @@ import kotlinx.serialization.Serializable
  *
  * - SOLID：纯色气泡（最稳，任何设备可用）
  * - GLASS：轻量玻璃拟态（半透明 + 细描边 + 柔和阴影），无需特殊硬件
+ * - LIQUID_GLASS：真实背景采样玻璃（backdrop + 模糊 + 色彩透射 + 边缘高光），
+ *   依赖 RuntimeShader，不支持时自动降级为 GLASS 观感
  */
 @Serializable
 enum class BubbleMaterial(val persistedValue: String) {
     SOLID("solid"),
-    GLASS("glass");
+    GLASS("glass"),
+    LIQUID_GLASS("liquid_glass");
 
     companion object {
         fun fromPersistedValue(value: String?): BubbleMaterial =

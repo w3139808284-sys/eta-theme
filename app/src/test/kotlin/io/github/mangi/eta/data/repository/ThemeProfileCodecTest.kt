@@ -100,8 +100,7 @@ class ThemeProfileCodecTest {
 
     /** AI 气泡样式字段必须能往返，且默认值对齐历史渲染。 */
     @Test
-    fun aiBubbleStyleRoundTripAndDefaults() {
-        val defaults = ThemeProfile().bubbles.ai
+    fun aiBubbleStyleRoundTripAndDefaults() {        val defaults = ThemeProfile().bubbles.ai
         assertEquals(14f, defaults.cornerRadiusDp)
         assertEquals(14f, defaults.paddingHorizontalDp)
         assertEquals(12f, defaults.paddingVerticalDp)
@@ -128,5 +127,38 @@ class ThemeProfileCodecTest {
         assertEquals(20f, ai.paddingHorizontalDp)
         assertEquals(18f, ai.paddingVerticalDp)
         assertEquals(BubbleMaterial.GLASS, ai.material)
+    }
+
+    /** LIQUID_GLASS 必须能序列化往返，且不破坏旧 GLASS/SOLID。 */
+    @Test
+    fun liquidGlassMaterialRoundTrip() {
+        val profile = ThemeProfile(
+            id = "liquid",
+            bubbles = BubbleStyleSet(
+                user = BubbleStyle(material = BubbleMaterial.LIQUID_GLASS),
+                ai = BubbleStyle(material = BubbleMaterial.LIQUID_GLASS),
+            ),
+        )
+
+        val decoded = ThemeProfileCodec.decode(ThemeProfileCodec.encode(listOf(profile)))
+
+        assertNotNull(decoded)
+        assertEquals(BubbleMaterial.LIQUID_GLASS, decoded!![0].bubbles.user.material)
+        assertEquals(BubbleMaterial.LIQUID_GLASS, decoded[0].bubbles.ai.material)
+    }
+
+    /** 旧档案（不含 LIQUID_GLASS 值）仍按原材质解码，行为不变。 */
+    @Test
+    fun legacyMaterialValuesStillDecode() {
+        val legacy = """
+            {"version":1,"profiles":[{"id":"old","name":"旧","bubbles":{
+              "user":{"material":"GLASS"},"ai":{"material":"SOLID"}}}]}
+        """.trimIndent()
+
+        val decoded = ThemeProfileCodec.decode(legacy)
+
+        assertNotNull(decoded)
+        assertEquals(BubbleMaterial.GLASS, decoded!![0].bubbles.user.material)
+        assertEquals(BubbleMaterial.SOLID, decoded[0].bubbles.ai.material)
     }
 }

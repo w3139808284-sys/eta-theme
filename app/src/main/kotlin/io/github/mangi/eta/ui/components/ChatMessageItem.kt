@@ -408,17 +408,22 @@ private fun UserMessageBubble(
             focusable = true,
             enableUserInput = actionsEnabled,
         ) {
+            // Liquid Glass 需要采样气泡背后的背景层（不含气泡自身）。
+            val backgroundBackdrop = LocalBackgroundBackdrop.current
             Column(
                 modifier = Modifier
                     .widthIn(max = bubbleMaxWidth)
                     .then(
                         if (assistantOverlay) {
                             Modifier.background(overlayBubbleColor, RoundedCornerShape(10.dp))
-                        } else if (userStyle.material == BubbleMaterial.GLASS) {
+                        } else if (
+                            userStyle.material == BubbleMaterial.GLASS ||
+                            userStyle.material == BubbleMaterial.LIQUID_GLASS
+                        ) {
                             Modifier
                                 .clip(RoundedCornerShape(bubbleCorner))
                                 .bubbleSurface(
-                                    material = BubbleMaterial.GLASS,
+                                    material = userStyle.material,
                                     shape = RoundedCornerShape(
                                         topStart = bubbleCorner,
                                         topEnd = bubbleCorner,
@@ -426,6 +431,7 @@ private fun UserMessageBubble(
                                         bottomStart = bubbleCorner,
                                     ),
                                     baseColor = userBubbleColor,
+                                    backdrop = backgroundBackdrop,
                                 )
                         } else {
                             Modifier.squircleSurface(
@@ -643,13 +649,17 @@ private fun AiBodyContainer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .then(
-                        if (aiStyle.material == BubbleMaterial.GLASS) {
+                        if (
+                            aiStyle.material == BubbleMaterial.GLASS ||
+                            aiStyle.material == BubbleMaterial.LIQUID_GLASS
+                        ) {
                             Modifier
                                 .clip(RoundedCornerShape(corner))
                                 .bubbleSurface(
-                                    material = BubbleMaterial.GLASS,
+                                    material = aiStyle.material,
                                     shape = RoundedCornerShape(corner),
                                     baseColor = fillColor,
+                                    backdrop = LocalBackgroundBackdrop.current,
                                 )
                         } else {
                             Modifier.squircleSurface(

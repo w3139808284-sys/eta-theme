@@ -80,4 +80,24 @@ class ThemeProfileTest {
         assertNotEquals(a.id, b.id)
         assertEquals(a.normalized().id, "a")
     }
+
+    @Test
+    fun liquidGlassMaterialParsesPersistedValue() {
+        assertEquals(BubbleMaterial.LIQUID_GLASS, BubbleMaterial.fromPersistedValue("liquid_glass"))
+        assertEquals("liquid_glass", BubbleMaterial.LIQUID_GLASS.persistedValue)
+    }
+
+    @Test
+    fun unknownPersistedMaterialStillFallsBackToSolid() {
+        // 旧版本读到未来新增的未知材质也不能崩，回落 SOLID。
+        assertEquals(BubbleMaterial.SOLID, BubbleMaterial.fromPersistedValue("holographic"))
+        assertEquals(BubbleMaterial.SOLID, BubbleMaterial.fromPersistedValue(null))
+    }
+
+    @Test
+    fun existingMaterialsKeepTheirPersistedValues() {
+        // 历史行为不能变。
+        assertEquals("solid", BubbleMaterial.SOLID.persistedValue)
+        assertEquals("glass", BubbleMaterial.GLASS.persistedValue)
+    }
 }
