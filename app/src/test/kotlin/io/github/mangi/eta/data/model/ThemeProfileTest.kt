@@ -100,4 +100,17 @@ class ThemeProfileTest {
         assertEquals("solid", BubbleMaterial.SOLID.persistedValue)
         assertEquals("glass", BubbleMaterial.GLASS.persistedValue)
     }
+
+    /**
+     * 回归防护：气泡设置面板按 ordinal 取材质标签数组。
+     * 若枚举条目数与 UI 标签数不一致就会 ArrayIndexOutOfBounds。
+     * 这里锁定「枚举顺序稳定」这个契约，UI 侧标签数量需与之同步。
+     */
+    @Test
+    fun materialOrdinalsAreStableAndContiguous() {
+        assertEquals(0, BubbleMaterial.SOLID.ordinal)
+        assertEquals(1, BubbleMaterial.GLASS.ordinal)
+        assertEquals(2, BubbleMaterial.LIQUID_GLASS.ordinal)
+        assertEquals(3, BubbleMaterial.entries.size)
+    }
 }
