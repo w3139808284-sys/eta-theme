@@ -233,6 +233,40 @@ internal object SettingsDataStore {
     fun appearanceSettingsFlow(): Flow<AppearanceSettings> =
         settingsFlow().map { it.appearance }
 
+    /**
+     * 全局交互设置：手势返回 / 预测性返回动画。
+     *
+     * 这两项不属于外观主题（切换主题不应改变用户的手势习惯），
+     * 因此单独以全局键持久化，不参与主题档案。
+     */
+    fun swipeDismissEnabledFlow(): Flow<Boolean> {
+        ensureInitialized()
+        return dataStore.data
+            .catch { cause ->
+                if (cause is IOException) emit(emptyPreferences()) else throw cause
+            }
+            .map { prefs -> prefs[APPEARANCE_SWIPE_DISMISS_ENABLED] ?: true }
+    }
+
+    suspend fun setSwipeDismissEnabled(enabled: Boolean) {
+        ensureInitialized()
+        dataStore.edit { prefs -> prefs[APPEARANCE_SWIPE_DISMISS_ENABLED] = enabled }
+    }
+
+    fun predictiveBackEnabledFlow(): Flow<Boolean> {
+        ensureInitialized()
+        return dataStore.data
+            .catch { cause ->
+                if (cause is IOException) emit(emptyPreferences()) else throw cause
+            }
+            .map { prefs -> prefs[APPEARANCE_PREDICTIVE_BACK_ENABLED] ?: true }
+    }
+
+    suspend fun setPredictiveBackEnabled(enabled: Boolean) {
+        ensureInitialized()
+        dataStore.edit { prefs -> prefs[APPEARANCE_PREDICTIVE_BACK_ENABLED] = enabled }
+    }
+
     suspend fun setSelectedProviderId(id: String?) {
         updateSettings { it.copy(selectedProviderId = id) }
     }

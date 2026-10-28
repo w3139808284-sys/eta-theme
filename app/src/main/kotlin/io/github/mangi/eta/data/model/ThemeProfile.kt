@@ -78,6 +78,19 @@ data class ThemeProfile(
     val accentColor: AppearanceAccentColor = AppearanceAccentColor.SYSTEM,
     /** 深色模式下使用纯黑背景。 */
     val pureBlackEnabled: Boolean = false,
+    /**
+     * 是否启用模糊效果（顶栏磨砂、输入栏 frost）。
+     *
+     * 属于视觉表现，随主题走：不同主题可以有不同的模糊开闭。
+     * 旧档案缺失该字段时回落到 true，与历史默认一致。
+     */
+    val blurEnabled: Boolean = true,
+    /**
+     * 顶栏模糊样式（高斯 / 渐进）。
+     *
+     * 同上，属视觉表现；旧档案缺失时回落到 GAUSSIAN。
+     */
+    val topBarBlurStyle: AppearanceTopBarBlurStyle = AppearanceTopBarBlurStyle.GAUSSIAN,
     /** 全局界面缩放（0.8~1.1）。 */
     val interfaceScale: Float = DEFAULT_INTERFACE_SCALE,
     /** 气泡圆角倍率（作用于气泡圆角的全局系数）。 */
