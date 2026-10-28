@@ -306,7 +306,6 @@ internal fun AgentChatInputBar(
                     // 无法被该槽位采样（content.eval 返回空白），因此这里做视觉近似。
                     .drawWithContent {
                         val corner = AppRadius.bubble.toPx()
-                        val shape = RoundedCornerShape(AppRadius.bubble)
                         val path = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(corner))) }
                         clipPath(path) {
                             // 基底：主题色低透明度，透出后方壁纸
