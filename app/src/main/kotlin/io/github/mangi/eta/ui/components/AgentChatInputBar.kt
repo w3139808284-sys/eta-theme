@@ -34,6 +34,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -101,6 +107,16 @@ private val SendIconSize = 16.dp
 private val StopIconSize = 10.dp
 private val ThinkingIconSize = 21.dp
 private val InputContainerShape = RoundedCornerShape(AppRadius.bubble)
+
+// ---- 输入框仿玻璃质感参数 ----
+// 说明：输入栏位于 Scaffold.bottomBar 槽位，无法采样 PageBackground 录制的壁纸层
+// （content.eval 返回空白），因此用半透明叠色 + 顶部高光做视觉近似，不是真实背景模糊。
+// 基底：主题 surfaceContainer 低透明度，让后方壁纸透出但仍保证文字对比度。
+private const val InputGlassBaseAlpha = 0.66f
+// 顶部高光：沿上缘渐隐的柔亮层，模拟玻璃反光。
+private const val InputGlassHighlightAlpha = 0.18f
+// 描边：略弱于原始 outline，保持"薄"的观感。
+private const val InputGlassBorderAlpha = 0.38f
 
 /**
  * Agent 输入器始终保持同一空间结构，聚焦、输入和执行过程只改变状态，不搬动操作入口。
@@ -241,6 +257,10 @@ internal fun AgentChatInputBar(
                     inputContainerTopPx = coordinates.positionInWindow().y.roundToInt()
                 },
         ) {
+            // 主题色必须在 Composable 作用域取出，不能放进 drawWithContent 的 DrawScope。
+            val glassBaseColor = MiuixTheme.colorScheme.surfaceContainer.copy(alpha = InputGlassBaseAlpha)
+            val glassHighlightColor = MiuixTheme.colorScheme.surface.copy(alpha = InputGlassHighlightAlpha)
+            val glassBorderColor = MiuixTheme.colorScheme.outline.copy(alpha = InputGlassBorderAlpha)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -252,13 +272,32 @@ internal fun AgentChatInputBar(
                             alpha = 0.08f,
                         ),
                     )
-                    .squircleSurface(
-                        color = MiuixTheme.colorScheme.surfaceContainer,
-                        cornerRadius = AppRadius.bubble,
-                    )
+                    // 仿玻璃质感：半透明叠色 + 顶部柔和高光，不使用真实背景采样。
+                    // 说明：输入栏位于 Scaffold.bottomBar 槽位，PageBackground 录制的壁纸层
+                    // 无法被该槽位采样（content.eval 返回空白），因此这里做视觉近似。
+                    .drawWithContent {
+                        val corner = AppRadius.bubble.toPx()
+                        val shape = RoundedCornerShape(AppRadius.bubble)
+                        val path = Path().apply { addRoundRect(RoundRect(0f, 0f, size.width, size.height, CornerRadius(corner))) }
+                        clipPath(path) {
+                            // 基底：主题色低透明度，透出后方壁纸
+                            drawRect(glassBaseColor)
+                            // 顶部高光：沿上缘渐隐，模拟玻璃反光
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        glassHighlightColor,
+                                        Color.Transparent,
+                                    ),
+                                    endY = size.height * 0.5f,
+                                ),
+                            )
+                        }
+                        drawContent()
+                    }
                     .squircleBorder(
                         width = 1.dp,
-                        color = MiuixTheme.colorScheme.outline.copy(alpha = 0.55f),
+                        color = glassBorderColor,
                         cornerRadius = AppRadius.bubble,
                     )
                     .padding(horizontal = 10.dp, vertical = 8.dp),
