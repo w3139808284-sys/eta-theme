@@ -420,19 +420,19 @@ private fun UserMessageBubble(
                             userStyle.material == BubbleMaterial.GLASS ||
                             userStyle.material == BubbleMaterial.LIQUID_GLASS
                         ) {
-                            Modifier
-                                .clip(RoundedCornerShape(bubbleCorner))
-                                .bubbleSurface(
-                                    material = userStyle.material,
-                                    shape = RoundedCornerShape(
-                                        topStart = bubbleCorner,
-                                        topEnd = bubbleCorner,
-                                        bottomEnd = if (isEditing) bubbleCorner else bubbleTailCorner,
-                                        bottomStart = bubbleCorner,
-                                    ),
-                                    baseColor = userBubbleColor,
-                                    backdrop = backgroundBackdrop,
-                                )
+                            // 不在此处 clip：GLASS 内部自己 clip，LIQUID_GLASS 的 textureBlur
+                            // 用 shape 参数裁剪，双重裁剪会让圆角边缘出现锯齿/缺失。
+                            Modifier.bubbleSurface(
+                                material = userStyle.material,
+                                shape = RoundedCornerShape(
+                                    topStart = bubbleCorner,
+                                    topEnd = bubbleCorner,
+                                    bottomEnd = if (isEditing) bubbleCorner else bubbleTailCorner,
+                                    bottomStart = bubbleCorner,
+                                ),
+                                baseColor = userBubbleColor,
+                                backdrop = backgroundBackdrop,
+                            )
                         } else {
                             Modifier.squircleSurface(
                                 color = userBubbleColor,
@@ -653,14 +653,13 @@ private fun AiBodyContainer(
                             aiStyle.material == BubbleMaterial.GLASS ||
                             aiStyle.material == BubbleMaterial.LIQUID_GLASS
                         ) {
-                            Modifier
-                                .clip(RoundedCornerShape(corner))
-                                .bubbleSurface(
-                                    material = aiStyle.material,
-                                    shape = RoundedCornerShape(corner),
-                                    baseColor = fillColor,
-                                    backdrop = LocalBackgroundBackdrop.current,
-                                )
+                            // 同用户气泡：不在外层 clip，避免与 textureBlur 的 shape 双重裁剪。
+                            Modifier.bubbleSurface(
+                                material = aiStyle.material,
+                                shape = RoundedCornerShape(corner),
+                                baseColor = fillColor,
+                                backdrop = LocalBackgroundBackdrop.current,
+                            )
                         } else {
                             Modifier.squircleSurface(
                                 color = fillColor,
