@@ -69,11 +69,11 @@ half4 main(float2 xy) {
     // 向外偏移采样：玻璃"吸入"外侧背景，形成透镜边缘。
     float2 samplePos = xy + n * (lift * refractionAmount);
 
-    // 采样点跑出画面外时退回原坐标，避免边缘黑边。
-    if (samplePos.x < 0.0 || samplePos.y < 0.0 ||
-        samplePos.x > size.x || samplePos.y > size.y) {
-        return content.eval(xy);
-    }
+    // 关键：把采样点夹取到合法范围，而不是越界就退回原坐标。
+    // 边缘带本就贴着轮廓，向外偏移极易越界；若越界即回退，边缘带会有大量像素
+    // 退化成零位移，使折射"看起来没生效"（已用 D2 涂绿测试实测确认）。
+    // 夹取能保证位移真实发生，同时不产生黑边。
+    samplePos = clamp(samplePos, float2(0.0), size);
     return content.eval(samplePos);
 }
 """
