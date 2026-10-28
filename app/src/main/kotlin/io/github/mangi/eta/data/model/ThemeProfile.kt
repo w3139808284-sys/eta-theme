@@ -57,14 +57,15 @@ data class BubbleStyle(
 data class BubbleStyleSet(
     val user: BubbleStyle = BubbleStyle(),
     /**
-     * AI 正文气泡默认值对齐历史渲染：卡片圆角 14dp、内边距 14/12、最大宽度 0.9。
-     * 这样未配置过 AI 样式的既有主题升级后视觉不变。
+     * AI 正文气泡默认值对齐历史渲染：卡片圆角 14dp、内边距 14/12。
+     * 最大宽度默认取满可用宽度：助手正文多为长段落/代码块，右侧留白不产生信息价值。
+     * 既有主题档案若已保存过 fraction，仍以其存档值为准，不被此默认值覆盖。
      */
     val ai: BubbleStyle = BubbleStyle(
         cornerRadiusDp = 14f,
         paddingHorizontalDp = 14f,
         paddingVerticalDp = 12f,
-        maxWidthFraction = 0.9f,
+        maxWidthFraction = 1f,
     ),
 ) {
     fun normalized(): BubbleStyleSet = copy(user = user.normalized(), ai = ai.normalized())

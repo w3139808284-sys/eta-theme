@@ -359,10 +359,10 @@ private fun UserMessageBubble(
         val avatarSettings = LocalAvatarSettings.current
         val showAvatar = avatarSettings.userEnabled && !assistantOverlay
         val avatarReserve = if (showAvatar) avatarSettings.sizeDp.dp + AvatarGap else 0.dp
-        val bubbleMaxWidth = minOf(
-            (320.dp * userStyle.maxWidthFraction),
-            (maxWidth - avatarReserve) * 0.78f,
-        ).coerceAtLeast(160.dp)
+        // 与 AI 气泡同规则：上限跟随可用宽度，不再叠加固定的 320dp 基数与 0.78 系数。
+        // 用户气泡右侧要为头像预留空间，因此先扣掉 avatarReserve 再按 fraction 取比例。
+        val bubbleMaxWidth = ((maxWidth - avatarReserve) * userStyle.maxWidthFraction)
+            .coerceAtLeast(160.dp)
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -634,10 +634,9 @@ private fun AiBodyContainer(
     val horizontalPadding = aiStyle.paddingHorizontalDp.dp
     val verticalPadding = aiStyle.paddingVerticalDp.dp
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val aiMaxWidth = minOf(
-            (320.dp * aiMaxWidthFraction),
-            maxWidth * 0.78f,
-        ).coerceAtLeast(240.dp)
+        // 宽度上限只由 fraction 决定，跟随容器实际宽度伸缩；
+        // 原先「320dp × fraction」的固定基数会让宽屏气泡停在中途、右侧留大片空白。
+        val aiMaxWidth = (maxWidth * aiMaxWidthFraction).coerceAtLeast(240.dp)
         Column(modifier = Modifier.widthIn(max = aiMaxWidth)) {
             if (!nameLabel.isNullOrBlank()) {
                 Text(
