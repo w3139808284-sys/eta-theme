@@ -84,25 +84,34 @@ internal fun Modifier.liquidGlassSurface(
         backdrop = backdrop as Backdrop,
         shape = { shape },
         effects = {
-            // 必须先执行 blur：downscaleFactor 由 blur() 依据模糊半径写入
-            // （BackdropEffectsKt.blur 内 computeDownScaleBlend -> 1 << expLo）。
+            // 必须先执行 blur：downscaleFactor 与 padding 都在 blur() 内写入
+            // （BackdropEffectsKt.blur: padding = 13 * (1 << expLo)）。
             blur(blurRadius)
 
-            // AGSL 的 coord 处于「降采样后的图层空间」（官方 docs/guide/blur.md 明确警告），
-            // 而 effectScope.size 是 ContentDrawScope 的全分辨率尺寸。
-            // 因此所有像素空间 uniform 必须除以 downscaleFactor，否则 SDF 会按 4 倍尺寸判定，
-            // 整个气泡落入"远离边缘"分支 -> 折射完全不生效。
+            // ---- 坐标空间换算（依据 Miuix 0.9.4 字节码）----
+            // 1. effectScope.size = ContentDrawScope.size = **气泡布局尺寸**（全分辨率 px，不含 padding）
+            // 2. padding = **全分辨率 px**（float，13 × downscaleFactor）
+            // 3. renderBlurInto 里 recordLayer 尺寸 = size + padding*2
+            // 4. shader 的 coord 作用在录制层上，范围 = (size + padding*2) / downscaleFactor
+            // 5. 录制层内气泡内容被 translate(+padding) 绘制，故气泡中心与录制层中心重合
             val scale = downscaleFactor.toFloat().coerceAtLeast(1f)
-            val w = size.width / scale
-            val h = size.height / scale
+            val pad = padding
+            // 录制层尺寸（降采样后）：用于 clamp 与 p 的原点，保留含 padding 的采样能力。
+            val layerW = (size.width + pad * 2f) / scale
+            val layerH = (size.height + pad * 2f) / scale
+            // 气泡自身尺寸（降采样后）：用于 SDF，使 sd=0 落在真实气泡轮廓上。
+            val bubbleW = size.width / scale
+            val bubbleH = size.height / scale
 
             runtimeShaderEffect(
                 key = LiquidGlassRefractionKey,
                 shaderString = LIQUID_GLASS_REFRACTION_AGSL,
                 uniformShaderName = "content",
             ) {
-                // 此处接收者是 RuntimeShader；上面的 scale/w/h 由闭包捕获。
-                setFloatUniform("size", w, h)
+                // 录制层尺寸：p 原点基准 + clamp 上界
+                setFloatUniform("size", layerW, layerH)
+                // 气泡尺寸：SDF 轮廓基准
+                setFloatUniform("bubbleSize", bubbleW, bubbleH)
                 setFloatUniform("cornerRadius", cornerRadiusPx / scale)
                 setFloatUniform("refractionHeight", refractionHeightPx / scale)
                 setFloatUniform("refractionAmount", refractionAmountPx / scale)
