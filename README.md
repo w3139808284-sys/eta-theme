@@ -1,5 +1,14 @@
 # Eta
 
+> **⚠️ 本仓库是基于上游项目的非官方改编版**
+>
+> - 上游项目：[Mangi-11/Eta](https://github.com/Mangi-11/Eta)
+> - 本仓库定位：**外观与主题系统增强分支**（Liquid Glass 材质、双方头像、气泡样式、工作过程折叠）
+> - 许可证：沿用上游 [PolyForm Noncommercial License 1.0.0](LICENSE)，**禁止商业使用**
+> - 本仓库为本地改编快照（`master` 为压缩基线），非上游完整 Git 历史
+> - 所有上游原创内容版权归原作者；本仓库仅包含在此之上的修改
+> - 与上游无隶属关系，未获官方背书
+
 **简体中文** | [English](README_EN.md)
 
  <p><a href="https://github.com/Mangi-11/Eta/releases"><img src="https://img.shields.io/github/downloads/Mangi-11/Eta/total?logo=github&amp;label=Downloads&amp;color=1677FF" alt="GitHub Releases 累计下载量"></a> <img src="https://img.shields.io/badge/minSdk-33-3DDC84?logo=android&amp;logoColor=white" alt="minSdk 33"> <img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin 2.4.20"> <img src="https://img.shields.io/badge/AGP-9.4.1-3DDC84?logo=android&amp;logoColor=white" alt="AGP 9.4.1"> <img src="https://img.shields.io/badge/Assistant%20Integrations-ColorOS%20%26%20HyperOS-1677FF" alt="Assistant integrations for ColorOS and HyperOS"></p>
