@@ -37,16 +37,18 @@ internal fun Modifier.liquidGlassSurface(
     if (backdrop == null || !isRuntimeShaderSupported()) return null
 
     val isLightGlass = containerColor.luminance() >= 0.5f
-    // 玻璃基色：向主题色轻微偏移，避免纯灰。
+    // 玻璃基色只做很轻的偏移：让"玻璃"有归属感，但不盖掉壁纸本身的颜色。
     val tintAlpha = if (isLightGlass) LiquidGlassTintAlphaLight else LiquidGlassTintAlphaDark
     val blendColors = BlurColors(
         blendColors = listOf(
             BlendColorEntry(containerColor.copy(alpha = tintAlpha)),
         ),
-        // 轻微提亮 + 提高对比：让背景纹理"看得出但退到后面"。
-        brightness = if (isLightGlass) 1.06f else 1.12f,
-        contrast = if (isLightGlass) 1.04f else 1.08f,
-        saturation = if (isLightGlass) 0.92f else 0.86f,
+        // 关键：不再提亮。提亮会让采样结果整体发白，丢失壁纸色彩。
+        // 改为极轻微压暗 + 略提对比，让文字在亮壁纸上也清晰，同时保留色相。
+        brightness = if (isLightGlass) 0.94f else 0.90f,
+        contrast = if (isLightGlass) 1.02f else 1.06f,
+        // 提高饱和度，让透出的壁纸颜色"活"一点，避免灰蒙蒙。
+        saturation = if (isLightGlass) 1.12f else 1.08f,
     )
     val highlight = Highlight(
         width = LiquidGlassEdgeWidth,
@@ -69,10 +71,12 @@ internal fun isLiquidGlassAvailable(backdrop: LayerBackdrop?): Boolean =
 /** 供 Shape 参数转换使用。 */
 internal fun liquidGlassShape(corner: androidx.compose.ui.unit.Dp): Shape = RoundedCornerShape(corner)
 
-// 中等偏强的玻璃强度：模糊足够遮蔽背景细节，但不至于糊成色块。
-private const val LiquidGlassBlurRadius = 26f
-private const val LiquidGlassTintAlphaLight = 0.30f
-private const val LiquidGlassTintAlphaDark = 0.38f
-private val LiquidGlassEdgeWidth = 1.2.dp
-private const val LiquidGlassEdgeAlphaLight = 0.72f
-private const val LiquidGlassEdgeAlphaDark = 0.58f
+// 模糊：足以糊掉壁纸细节，但仍保留大块色彩与明暗变化。
+private const val LiquidGlassBlurRadius = 18f
+// tint 收得很低，让壁纸颜色主导气泡内观感。
+private const val LiquidGlassTintAlphaLight = 0.14f
+private const val LiquidGlassTintAlphaDark = 0.20f
+// 边缘高光：克制的一条细线，不做发光。
+private val LiquidGlassEdgeWidth = 1.dp
+private const val LiquidGlassEdgeAlphaLight = 0.55f
+private const val LiquidGlassEdgeAlphaDark = 0.42f

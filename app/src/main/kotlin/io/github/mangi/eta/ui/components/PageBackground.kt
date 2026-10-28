@@ -44,8 +44,13 @@ fun PageBackground(
     val canSample = isRuntimeShaderSupported()
     val fallbackColor = MiuixTheme.colorScheme.background
     // 背景层自身的绘制内容被记录，供气泡采样；与消息区 backdrop 完全分离。
+    //
+    // drawRect(fallbackColor) 提供不透明底衬（避免模糊到透明区域出现黑边）；
+    // drawContent() 才是把「壁纸图片 + 遮罩」真正录进 backdrop 的关键，
+    // 缺少它时 backdrop 内只有纯色，气泡采样到的就是一片纯色 —— 表现为"只是变透明的白块"。
     val backgroundBackdrop = rememberLayerBackdrop {
         drawRect(fallbackColor)
+        drawContent()
     }
     Box(modifier = modifier.fillMaxSize()) {
         Box(
