@@ -9,6 +9,68 @@
 > - 所有上游原创内容版权归原作者；本仓库仅包含在此之上的修改
 > - 与上游无隶属关系，未获官方背书
 
+---
+
+## 本仓库快速上手
+
+> 本节面向后续接手的 AI 或开发者，说明本仓库（而非上游）的实际情况。
+
+### 仓库用途
+
+这是 **Eta 项目源码仓库**。`Liquid Glass` 只是其中一项 UI 改动，**不是独立的主题包**，也不是独立应用。仓库内包含完整的 Eta Android 源码，外观改动叠加在聊天界面这一层。
+
+### 稳定版本分支
+
+- **稳定版本分支：`fix/glass-downscale-uniforms`**
+- 该分支是当前外观与主题改动的最终落点，请以此分支为准开展后续 Liquid Glass / 主题相关工作。
+- **不要默认使用仓库默认分支**（本仓库 `master` 只是压缩后的基线快照，不含后续改动）。
+
+### 已验证版本
+
+| 项 | 值 |
+|---|---|
+| 已验证提交 | `d4f29e634447fd49b74a7d9d673cee0d83281c31` |
+| 验证日期 | 2026-10-28 |
+| 验证范围 | 编译通过、Release APK 构建成功、装机启动无崩溃（`adb install` 实测）；Liquid Glass 折射带扩大、输入框仿玻璃观感均已截图验证 |
+| 未验证项 | 深色主题下的输入框可读性、长时间滚动/多气泡同屏的帧率表现、第三方 LSPosed 模块与本改动的兼容性 |
+
+> 上述「已验证」仅指已实际执行的项；未验证内容不要当作已完成。
+
+### 构建说明
+
+本仓库构建依赖特定环境，**并非任何机器开箱即用**：
+
+- **AGP 9.4.1 / Kotlin 2.4.20 / Gradle 9.7.1**
+- **JDK 25**、**Android SDK compileSdk 37**（minSdk 33 / targetSdk 37）
+- 依赖 `top.yukonga.miuix.kmp`（`miuix-*`，0.9.4），含 `miuix-blur` 提供的 backdrop 采样能力
+- 签名环境变量（Release 需要）：`ETA_RELEASE_STORE_FILE` / `ETA_RELEASE_STORE_PASSWORD` / `ETA_RELEASE_KEY_ALIAS` / `ETA_RELEASE_KEY_PASSWORD`
+
+典型构建命令（需先配置好 JDK/SDK 环境变量）：
+
+```bash
+# Debug 编译
+./gradlew :app:compileDebugKotlin
+
+# Release APK
+./gradlew :app:assembleRelease
+```
+
+> 若你的构建环境与上述 JDK / SDK 版本不一致，构建结果**未经验证**；请先自行确认工具链，再据此修改构建说明。
+
+### 效果说明（重要）
+
+- **输入栏当前是「仿玻璃」视觉效果**：半透明叠色 + 顶部高光 + 细描边。
+- **它不是真实的背景模糊**。输入栏位于 `Scaffold.bottomBar` 槽位，无法采样 `PageBackground` 录制的壁纸层（采样返回空白），因此采用了视觉近似，而非对后方壁纸/消息做实时模糊。
+- 不要误写成「已实现真实背景模糊」。
+
+### 后续 AI 操作注意事项
+
+1. 接手前**先阅读本 README 本节**，确认目标分支、工作区状态与最近提交。
+2. **不要默认使用仓库默认分支**开展 Liquid Glass 工作；目标分支是 `fix/glass-downscale-uniforms`。
+3. 改动前核对 `git status`，确认没有未提交改动；不要覆盖或丢弃已有工作。
+4. 不要合并分支、不要切换/覆盖默认分支、不要删除分支、不要重写历史。
+5. 只改与任务直接相关的文件；不要顺手重构无关模块。
+
 **简体中文** | [English](README_EN.md)
 
  <p><a href="https://github.com/Mangi-11/Eta/releases"><img src="https://img.shields.io/github/downloads/Mangi-11/Eta/total?logo=github&amp;label=Downloads&amp;color=1677FF" alt="GitHub Releases 累计下载量"></a> <img src="https://img.shields.io/badge/minSdk-33-3DDC84?logo=android&amp;logoColor=white" alt="minSdk 33"> <img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin 2.4.20"> <img src="https://img.shields.io/badge/AGP-9.4.1-3DDC84?logo=android&amp;logoColor=white" alt="AGP 9.4.1"> <img src="https://img.shields.io/badge/Assistant%20Integrations-ColorOS%20%26%20HyperOS-1677FF" alt="Assistant integrations for ColorOS and HyperOS"></p>
