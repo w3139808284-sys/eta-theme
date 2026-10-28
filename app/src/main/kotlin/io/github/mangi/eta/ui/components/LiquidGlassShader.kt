@@ -24,7 +24,10 @@ package io.github.mangi.eta.ui.components
  */
 internal const val LIQUID_GLASS_REFRACTION_AGSL = """
 uniform shader content;
+// size       = 录制层尺寸（= 气泡尺寸 + 2×padding），降采样后。用于 p 的原点与 clamp 上界。
 uniform float2 size;
+// bubbleSize = 气泡自身尺寸，降采样后。用于 SDF，使 sd=0 落在真实气泡轮廓上。
+uniform float2 bubbleSize;
 uniform float cornerRadius;
 uniform float refractionHeight;
 uniform float refractionAmount;
@@ -50,10 +53,17 @@ float2 sdRoundRectGrad(float2 p, float2 halfSize, float r) {
 }
 
 half4 main(float2 xy) {
-    float2 halfSize = size * 0.5;
-    float2 p = xy - halfSize;
-    float r = min(cornerRadius, min(halfSize.x, halfSize.y));
-    float sd = sdRoundRect(p, halfSize, r);
+    // p 以「录制层中心」为原点。因为气泡内容被 translate(+padding) 居中绘制在录制层内，
+    // 且 padding 四周对称，所以气泡中心与录制层中心重合，该原点对两者通用。
+    float2 layerHalf = size * 0.5;
+    float2 p = xy - layerHalf;
+
+    // SDF 用「气泡半尺寸」，而不是录制层半尺寸：
+    // 录制层比气泡外扩 padding，若用 layerHalf 则 sd=0 会落在录制层边界（气泡外），
+    // 导致边缘带整体被推出气泡轮廓、并被 setClip 裁掉。
+    float2 bubbleHalf = bubbleSize * 0.5;
+    float r = min(cornerRadius, min(bubbleHalf.x, bubbleHalf.y));
+    float sd = sdRoundRect(p, bubbleHalf, r);
 
     // 远离边缘：完全原样，保证正文区域不受影响。
     if (-sd >= refractionHeight) {
@@ -65,7 +75,7 @@ half4 main(float2 xy) {
     // 圆滑过渡（arc-lift），避免线性过渡产生可见的折线。
     float lift = 1.0 - sqrt(max(1.0 - t * t, 0.0));
 
-    float2 n = sdRoundRectGrad(p, halfSize, r);
+    float2 n = sdRoundRectGrad(p, bubbleHalf, r);
     // 向外偏移采样：玻璃"吸入"外侧背景，形成透镜边缘。
     float2 samplePos = xy + n * (lift * refractionAmount);
 
