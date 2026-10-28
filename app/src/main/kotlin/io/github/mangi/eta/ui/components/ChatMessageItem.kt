@@ -411,6 +411,8 @@ private fun UserMessageBubble(
         ) {
             // Liquid Glass 需要采样气泡背后的背景层（不含气泡自身）。
             val backgroundBackdrop = LocalBackgroundBackdrop.current
+            // AGSL 坐标系是渲染像素，圆角必须换算成 px 再传给 shader。
+            val bubbleCornerPx = with(LocalDensity.current) { bubbleCorner.toPx() }
             Column(
                 modifier = Modifier
                     .widthIn(max = bubbleMaxWidth)
@@ -425,6 +427,7 @@ private fun UserMessageBubble(
                             // 用 shape 参数裁剪，双重裁剪会让圆角边缘出现锯齿/缺失。
                             Modifier.bubbleSurface(
                                 material = userStyle.material,
+                                cornerRadiusPx = bubbleCornerPx,
                                 shape = RoundedCornerShape(
                                     topStart = bubbleCorner,
                                     topEnd = bubbleCorner,
@@ -626,6 +629,8 @@ private fun AiBodyContainer(
     val fillColor = aiStyle.backgroundArgb?.let { Color(it.toInt()) }
         ?: MiuixTheme.colorScheme.surface.copy(alpha = 0.72f)
     val corner = aiStyle.cornerRadiusDp.dp
+    // AGSL 用像素坐标，圆角需换算成 px。
+    val cornerPx = with(LocalDensity.current) { corner.toPx() }
     val horizontalPadding = aiStyle.paddingHorizontalDp.dp
     val verticalPadding = aiStyle.paddingVerticalDp.dp
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
@@ -657,6 +662,7 @@ private fun AiBodyContainer(
                             // 同用户气泡：不在外层 clip，避免与 textureBlur 的 shape 双重裁剪。
                             Modifier.bubbleSurface(
                                 material = aiStyle.material,
+                                cornerRadiusPx = cornerPx,
                                 shape = RoundedCornerShape(corner),
                                 baseColor = fillColor,
                                 backdrop = LocalBackgroundBackdrop.current,

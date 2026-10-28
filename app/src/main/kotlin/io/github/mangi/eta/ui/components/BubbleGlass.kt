@@ -32,12 +32,15 @@ fun Modifier.bubbleSurface(
     shape: RoundedCornerShape,
     baseColor: Color,
     backdrop: LayerBackdrop? = null,
+    /** 气泡圆角像素值（AGSL 用；由调用方按 density 换算）。 */
+    cornerRadiusPx: Float = 0f,
 ): Modifier {
     if (material == BubbleMaterial.LIQUID_GLASS) {
         val liquid = liquidGlassSurface(
             backdrop = backdrop,
             shape = shape,
             containerColor = baseColor,
+            cornerRadiusPx = cornerRadiusPx,
         )
         if (liquid != null) return liquid
         // 降级：无 backdrop / 不支持 shader 时退回 GLASS 观感。
