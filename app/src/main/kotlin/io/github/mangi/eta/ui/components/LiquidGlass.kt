@@ -84,21 +84,28 @@ internal fun Modifier.liquidGlassSurface(
         backdrop = backdrop as Backdrop,
         shape = { shape },
         effects = {
+            // 必须先执行 blur：downscaleFactor 由 blur() 依据模糊半径写入
+            // （BackdropEffectsKt.blur 内 computeDownScaleBlend -> 1 << expLo）。
             blur(blurRadius)
+
+            // AGSL 的 coord 处于「降采样后的图层空间」（官方 docs/guide/blur.md 明确警告），
+            // 而 effectScope.size 是 ContentDrawScope 的全分辨率尺寸。
+            // 因此所有像素空间 uniform 必须除以 downscaleFactor，否则 SDF 会按 4 倍尺寸判定，
+            // 整个气泡落入"远离边缘"分支 -> 折射完全不生效。
+            val scale = downscaleFactor.toFloat().coerceAtLeast(1f)
+            val w = size.width / scale
+            val h = size.height / scale
+
             runtimeShaderEffect(
                 key = LiquidGlassRefractionKey,
                 shaderString = LIQUID_GLASS_REFRACTION_AGSL,
                 uniformShaderName = "content",
             ) {
-                // block 的接收者是 RuntimeShader；size 需显式取外层 effectScope 的。
-                // 单位：全部为像素（见上方坐标契约）。
-                val (w, h) = this@drawBackdrop.let { scope ->
-                    scope.size.width to scope.size.height
-                }
+                // 此处接收者是 RuntimeShader；上面的 scale/w/h 由闭包捕获。
                 setFloatUniform("size", w, h)
-                setFloatUniform("cornerRadius", cornerRadiusPx)
-                setFloatUniform("refractionHeight", refractionHeightPx)
-                setFloatUniform("refractionAmount", refractionAmountPx)
+                setFloatUniform("cornerRadius", cornerRadiusPx / scale)
+                setFloatUniform("refractionHeight", refractionHeightPx / scale)
+                setFloatUniform("refractionAmount", refractionAmountPx / scale)
             }
         },
         highlight = { highlight },
