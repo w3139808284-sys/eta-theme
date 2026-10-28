@@ -601,7 +601,11 @@ private fun ContextCompactionMarker(
 
 /**
  * AI 正文承载容器：为 StaticMarkdown / StreamingMarkdown 提供独立表面，
- * 避免正文裸字压在壁纸上。宽度上限按 aiStyle.maxWidthFraction 与可用宽度约束。
+ * 避免正文裸字压在壁纸上。
+ *
+ * 样式来源：`BubbleStyleSet.ai`（backgroundArgb / cornerRadiusDp / padding* / material /
+ * maxWidthFraction），未配置时回落到历史默认（surface 72% + AppRadius.card + 14/12）。
+ * 文字色 textArgb 为空时沿用主题 onSurface，避免未配置时改变可读性。
  *
  * [nameLabel] 非空时在气泡正上方左对齐渲染名字标签，底边距气泡顶边 4dp。
  */
@@ -611,7 +615,13 @@ private fun AiBodyContainer(
     nameLabel: String? = null,
     content: @Composable () -> Unit,
 ) {
-    val aiMaxWidthFraction = LocalBubbleStyles.current.ai.maxWidthFraction
+    val aiStyle = LocalBubbleStyles.current.ai
+    val aiMaxWidthFraction = aiStyle.maxWidthFraction
+    val fillColor = aiStyle.backgroundArgb?.let { Color(it.toInt()) }
+        ?: MiuixTheme.colorScheme.surface.copy(alpha = 0.72f)
+    val corner = aiStyle.cornerRadiusDp.dp
+    val horizontalPadding = aiStyle.paddingHorizontalDp.dp
+    val verticalPadding = aiStyle.paddingVerticalDp.dp
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val aiMaxWidth = minOf(
             (320.dp * aiMaxWidthFraction),
@@ -633,16 +643,28 @@ private fun AiBodyContainer(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .squircleSurface(
-                        color = MiuixTheme.colorScheme.surface.copy(alpha = 0.72f),
-                        cornerRadius = AppRadius.card,
+                    .then(
+                        if (aiStyle.material == BubbleMaterial.GLASS) {
+                            Modifier
+                                .clip(RoundedCornerShape(corner))
+                                .bubbleSurface(
+                                    material = BubbleMaterial.GLASS,
+                                    shape = RoundedCornerShape(corner),
+                                    baseColor = fillColor,
+                                )
+                        } else {
+                            Modifier.squircleSurface(
+                                color = fillColor,
+                                cornerRadius = corner,
+                            )
+                        },
                     )
                     .squircleBorder(
                         width = 1.dp,
                         color = MiuixTheme.colorScheme.outline.copy(alpha = 0.12f),
-                        cornerRadius = AppRadius.card,
+                        cornerRadius = corner,
                     )
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = horizontalPadding, vertical = verticalPadding),
             ) {
                 content()
             }
