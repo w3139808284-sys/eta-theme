@@ -53,7 +53,16 @@ data class BubbleStyle(
 @Serializable
 data class BubbleStyleSet(
     val user: BubbleStyle = BubbleStyle(),
-    val ai: BubbleStyle = BubbleStyle(cornerRadiusDp = 20f, maxWidthFraction = 0.9f),
+    /**
+     * AI 正文气泡默认值对齐历史渲染：卡片圆角 14dp、内边距 14/12、最大宽度 0.9。
+     * 这样未配置过 AI 样式的既有主题升级后视觉不变。
+     */
+    val ai: BubbleStyle = BubbleStyle(
+        cornerRadiusDp = 14f,
+        paddingHorizontalDp = 14f,
+        paddingVerticalDp = 12f,
+        maxWidthFraction = 0.9f,
+    ),
 ) {
     fun normalized(): BubbleStyleSet = copy(user = user.normalized(), ai = ai.normalized())
 }
