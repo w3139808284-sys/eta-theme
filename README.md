@@ -1,5 +1,14 @@
 <h1 align="center">Eta</h1>
 
+> **⚠️ 本仓库是基于上游项目的非官方改编版**
+>
+> - 上游项目：[Mangi-11/Eta](https://github.com/Mangi-11/Eta)
+> - 本仓库定位：**外观与主题系统增强分支**（Liquid Glass 材质、双方头像、气泡样式、工作过程折叠）
+> - 许可证：沿用上游 [PolyForm Noncommercial License 1.0.0](LICENSE)，**禁止商业使用**
+> - 本仓库为本地改编快照（`master` 为压缩基线），非上游完整 Git 历史
+> - 所有上游原创内容版权归原作者；本仓库仅包含在此之上的修改
+> - 与上游无隶属关系，未获官方背书
+
 <p align="center"><strong>简体中文</strong> | <a href="README_EN.md">English</a></p>
 
 <p align="center"><strong>面向 Android 的第三方系统级 AI 助手</strong></p>
